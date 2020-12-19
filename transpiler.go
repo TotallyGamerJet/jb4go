@@ -10,6 +10,8 @@ import (
 	"log"
 )
 
+//https://www.mirkosertic.de/blog/2017/06/compiling-bytecode-to-javascript/
+//https://tomassetti.me/how-to-write-a-transpiler/
 func main() { //"Employee.class")
 	b, err := ioutil.ReadFile("/Users/jarrettkuklis/eclipse-workspace/csis 312/src/gcd/gcdClass.class")
 	if err != nil {
