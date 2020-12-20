@@ -4,26 +4,26 @@ import (
 	"github.com/totallygamerjet/jb4go/parser"
 )
 
-// Class is an easy to use representation of a RawClass.
-// It provides everything you need to transpil java byte code
-type Class struct {
-	SrcFileName string   `json:"filename"`
-	Name        string   `json:"name"`
-	SuperName   string   `json:"super"`
-	IsPublic    bool     `json:"public"`
-	Fields      []Field  `json:"fields"`
-	Methods     []Method `json:"methods"`
+// JClass is an easy to use representation of a RawClass.
+// It provides everything you need to transpile java byte code
+type JClass struct {
+	SrcFileName string    `json:"filename"`
+	Name        string    `json:"name"`
+	SuperName   string    `json:"super"`
+	IsPublic    bool      `json:"public"`
+	Fields      []JField  `json:"fields"`
+	Methods     []JMethod `json:"methods"`
 	// TODO: attributes
 }
 
-type Field struct {
+type JField struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
 	IsPublic bool   `json:"public"`
 	IsStatic bool   `json:"static"`
 }
 
-type Method struct {
+type JMethod struct {
 	Name      string   `json:"name"`
 	IsPublic  bool     `json:"public"`
 	IsStatic  bool     `json:"static"`
@@ -34,23 +34,23 @@ type Method struct {
 	Return    string   `json:"return"`
 }
 
-func Simplify(raw parser.RawClass) (c Class, err error) {
+func Simplify(raw parser.RawClass) (c JClass, err error) {
 	c.SrcFileName = raw.GetFileName()
 	c.Name = raw.GetName()
 	c.SuperName = raw.GetSuperName()
 	c.IsPublic = raw.IsPublic()
-	c.Fields = make([]Field, len(raw.Fields))
+	c.Fields = make([]JField, len(raw.Fields))
 	for i, f := range raw.Fields {
-		var field Field
+		var field JField
 		field.Name = f.GetName(raw)
 		field.Type = f.GetType(raw)
 		field.IsPublic = f.IsPublic()
 		field.IsStatic = f.IsStatic()
 		c.Fields[i] = field
 	}
-	c.Methods = make([]Method, len(raw.Methods))
+	c.Methods = make([]JMethod, len(raw.Methods))
 	for i, info := range raw.Methods {
-		var m Method
+		var m JMethod
 		m.Name = info.GetName(raw)
 		m.IsPublic = info.IsPublic()
 		m.IsStatic = info.IsStatic()

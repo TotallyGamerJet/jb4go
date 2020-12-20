@@ -6,18 +6,13 @@ import (
 	"github.com/totallygamerjet/jb4go/gen"
 	"github.com/totallygamerjet/jb4go/parser"
 	"github.com/totallygamerjet/jb4go/transformer"
-	"io/ioutil"
 	"log"
 )
 
 //https://www.mirkosertic.de/blog/2017/06/compiling-bytecode-to-javascript/
 //https://tomassetti.me/how-to-write-a-transpiler/
-func main() { //"Employee.class")
-	b, err := ioutil.ReadFile("/Users/jarrettkuklis/eclipse-workspace/csis 312/src/gcd/gcdClass.class")
-	if err != nil {
-		log.Fatal("Couldn't open file: ", err)
-	}
-	raw, err := parser.ParseBytecode(b)
+func main() {
+	raw, err := parser.ParseFile("./examples/Employee.class")
 	if err != nil {
 		log.Fatal("Couldn't parse java file: ", err)
 	}
@@ -30,8 +25,12 @@ func main() { //"Employee.class")
 		log.Fatal(err)
 	}
 	fmt.Println(string(j))
-	//fmt.Println(class)
-	err = gen.Transpile(class)
+	gFile, err := transformer.Translate(class)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(gFile)
+	err = gen.Generate(gFile)
 	if err != nil {
 		log.Fatal("Failed to generator: ", err)
 	}

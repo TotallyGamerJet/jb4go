@@ -1,4 +1,4 @@
-package gen
+package transformer
 
 import (
 	"github.com/dave/jennifer/jen"
@@ -63,7 +63,7 @@ func toGoType(javaType string, f *jen.Statement) {
 	case "void": // do nothing
 	default:
 		if strings.HasPrefix(javaType, "L") {
-			name := validateName(strings.ReplaceAll(javaType[1:], "/", "_"), true)
+			name := ValidateName(strings.ReplaceAll(javaType[1:], "/", "_"), true)
 			f.Op("*").Qual("github.com/totallygamerjet/java", name)
 			return
 		}
@@ -72,7 +72,11 @@ func toGoType(javaType string, f *jen.Statement) {
 }
 
 // takes in a name and its visibility and converts it to a valid name
-func validateName(name string, public bool) string {
+func ValidateName(name string, public bool) string {
+	if strings.HasPrefix(name, "L") && strings.HasSuffix(name, ";") {
+		name = name[1 : len(name)-1] // trim off the l and ;
+	}
+	name = strings.ReplaceAll(name, "/", "_")
 	if public {
 		name = "P_" + name
 	} else { // private method
@@ -82,4 +86,27 @@ func validateName(name string, public bool) string {
 		name += "_"
 	}
 	return name
+}
+
+func getGoType(jType string) string {
+	switch jType {
+	case "char":
+		return "uint16"
+	case "short":
+		return "int16"
+	case "byte":
+		return "int8"
+	case "int":
+		return "int32"
+	case "long":
+		return "int64"
+	case "float":
+		return "float32"
+	case "double":
+		return "float64"
+	case "boolean":
+		return "bool"
+	default:
+		return ValidateName(jType, true) // is this right?
+	}
 }

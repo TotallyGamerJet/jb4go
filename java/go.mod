@@ -1,1 +1,1 @@
-module "github.com/totallygamerjet/java"
+module "github.com/totallygamerjet/jb4go/java"
