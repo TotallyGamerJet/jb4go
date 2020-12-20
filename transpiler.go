@@ -7,12 +7,17 @@ import (
 	"github.com/totallygamerjet/jb4go/parser"
 	"github.com/totallygamerjet/jb4go/transformer"
 	"log"
+	"os"
 )
 
 //https://www.mirkosertic.de/blog/2017/06/compiling-bytecode-to-javascript/
 //https://tomassetti.me/how-to-write-a-transpiler/
 func main() {
-	raw, err := parser.ParseFile("./examples/Employee.class")
+	f, err := os.Open("./examples/Employee.class") //TODO: handle .jar files
+	if err != nil {
+		log.Fatal(err)
+	}
+	raw, err := parser.Parse(f)
 	if err != nil {
 		log.Fatal("Couldn't parse java file: ", err)
 	}

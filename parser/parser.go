@@ -5,7 +5,6 @@ import (
 	errors2 "github.com/pkg/errors"
 	"io"
 	"io/ioutil"
-	"os"
 )
 
 type Parser struct {
@@ -42,18 +41,10 @@ func ParseBytecode(java []byte) (RawClass, error) {
 	return ReadClass(p)
 }
 
-func ParseReader(r io.Reader) (RawClass, error) {
+func Parse(r io.Reader) (RawClass, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return RawClass{}, errors2.Wrap(err, "Unable to read Reader")
 	}
 	return ParseBytecode(b)
-}
-
-func ParseFile(filename string) (RawClass, error) {
-	f, err := os.Open(filename) //TODO: handle .jar files
-	if err != nil {
-		return RawClass{}, err
-	}
-	return ParseReader(f)
 }
