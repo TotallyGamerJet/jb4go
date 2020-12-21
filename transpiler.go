@@ -13,7 +13,7 @@ import (
 //https://www.mirkosertic.de/blog/2017/06/compiling-bytecode-to-javascript/
 //https://tomassetti.me/how-to-write-a-transpiler/
 func main() {
-	f, err := os.Open("./examples/Employee.class") //TODO: handle .jar files
+	f, err := os.Open("./examples/gcdClass.class") //TODO: handle .jar files
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,6 +37,6 @@ func main() {
 	fmt.Println(gFile)
 	err = gen.Generate(gFile)
 	if err != nil {
-		log.Fatal("Failed to generator: ", err)
+		log.Fatal("Failed to generate: ", err)
 	}
 }

@@ -56,7 +56,18 @@ func Translate(class JClass) (g GoFile, err error) {
 			m.Receiver = "arg" + strconv.Itoa(argN) + " *" + g.Struct.Name
 			argN++
 		}
+		var isArray = false
 		for _, v2 := range v.Params {
+			if isArray {
+				m.Params = append(m.Params, [2]string{"arg" + strconv.Itoa(argN), "[]" + getGoType(v2)})
+				isArray = false
+				argN++
+				continue
+			}
+			if v2 == "[" {
+				isArray = true
+				continue
+			}
 			m.Params = append(m.Params, [2]string{"arg" + strconv.Itoa(argN), getGoType(v2)})
 			argN++
 		}
