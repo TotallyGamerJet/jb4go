@@ -3,7 +3,7 @@ package main
 import java "github.com/totallygamerjet/jb4go/java"
 
 type P_Employee struct {
-	java.Java_lang_Object
+	java.P_java_lang_Object
 	_firstName            *java.P_java_lang_String
 	_lastName             *java.P_java_lang_String
 	_socialSecurityNumber *java.P_java_lang_String

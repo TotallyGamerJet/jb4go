@@ -32,12 +32,12 @@ All methods start with its name exported followed by an '_' then a list of the p
 conversion rules
 than another '_' and its return type. If there are no parameters there are two '__' next to each
 other.
-If a method is static it becomes a go function with the Java_lang_Object's name preceeding it.
+If a method is static it becomes a go function with the P_java_lang_Object's name preceeding it.
 Constructors are the same as methods expect they have an '_C' at the very end to signify its a
 constructor
 */
 
 /*
 Each object has two automatic methods Synchronize and Unsynchronize that lock and unlock the mutex
-on the Java_lang_Object.
+on the P_java_lang_Object.
 */

@@ -28,11 +28,11 @@ type Method struct {
 }
 
 func Translate(class JClass) (g GoFile, err error) {
-	g.FileName = strings.ReplaceAll(class.SrcFileName, ".java", ".go")
 	g.Package = class.Name[:strings.LastIndex(class.Name, "/")]
+	g.FileName = g.Package + "_" + strings.ReplaceAll(class.SrcFileName, ".java", ".go")
 	g.Struct = Struct{
 		Name:  ValidateName(class.Name, class.IsPublic),
-		Embed: ValidateName(class.SuperName, true), // is this always true?
+		Embed: getGoType(class.SuperName),
 	}
 	for _, v := range class.Fields {
 		var f [2]string
@@ -46,7 +46,7 @@ func Translate(class JClass) (g GoFile, err error) {
 	}
 	for _, v := range class.Methods {
 		m := Method{
-			Name: translateMethodName(v),
+			Name: translateMethodName(v, g.Struct),
 		}
 		if v.Return != "void" {
 			m.Return = getGoType(v.Return)
@@ -77,12 +77,17 @@ func Translate(class JClass) (g GoFile, err error) {
 	return g, nil
 }
 
-func translateMethodName(v JMethod) (name string) {
+func translateMethodName(v JMethod, s Struct) (name string) {
 	name = v.Name
 	if name == "<init>" {
 		name = "init"
 	}
-	name = ValidateName(name, v.IsPublic)
+	if v.IsStatic {
+		name = s.Name + "_" + name
+	} else {
+		name = ValidateName(name, v.IsPublic)
+	}
+
 	name += "_"
 	for _, p := range v.Params {
 		name += TranslateIdent(p)

@@ -26,7 +26,7 @@ func TranslateIdent(str string) string {
 	case "boolean":
 		return "Z"
 	case "[":
-		return "A"
+		return "R"
 	case "void":
 		return "V"
 	case "Ljava/lang/String":
@@ -107,6 +107,6 @@ func getGoType(jType string) string {
 	case "boolean":
 		return "bool"
 	default:
-		return ValidateName(jType, true) // is this right?
+		return "*" + ValidateName(jType, true) // is this right?
 	}
 }

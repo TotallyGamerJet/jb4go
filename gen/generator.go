@@ -32,6 +32,7 @@ func Generate(g transformer.GoFile) error {
 		fn.Block(
 		//TODO: write code
 		)
+		f.Line()
 	}
 	return f.Save(g.FileName)
 }
