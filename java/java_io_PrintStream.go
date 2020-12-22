@@ -8,7 +8,7 @@ type P_java_io_PrintStream struct{}
 
 func (this *P_java_io_PrintStream) P_print_G_V(str *P_java_lang_String) {
 	if str == nil {
-		str = NewString_string_G("null")
+		str = New_string_G("null")
 	}
 	this._write_String_void(str)
 }

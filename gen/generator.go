@@ -7,6 +7,9 @@ import (
 
 func Generate(g transformer.GoFile) error {
 	f := jen.NewFile(g.Package)
+	for _, v := range g.Imports {
+		f.ImportAlias(v[0], v[1])
+	}
 	for _, v := range g.Globals {
 		f.Var().Id(v[0]).Id(v[1])
 	}
@@ -23,7 +26,7 @@ func Generate(g transformer.GoFile) error {
 		fn.Id(v.Name)
 		var params []jen.Code
 		for _, p := range v.Params {
-			params = append(params, jen.Id(p[0]).Id(p[1]))
+			params = append(params, genType(p))
 		}
 		fn.Params(params...)
 		if v.Return != "" {
@@ -35,4 +38,19 @@ func Generate(g transformer.GoFile) error {
 		f.Line()
 	}
 	return f.Save(g.FileName)
+}
+
+func genType(p [3]string) *jen.Statement {
+	s := jen.Id(p[0])
+	if p[2] != "" { // check if this type has an import
+		s.Qual(p[2], p[1])
+		return s
+	}
+	switch p[1] {
+	case "int32":
+		s.Int32()
+	default:
+		panic("not implemented")
+	}
+	return s
 }

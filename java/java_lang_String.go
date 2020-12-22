@@ -6,7 +6,7 @@ type P_java_lang_String struct {
 	hash  int32
 }
 
-func NewString_string_G(str string) (this *P_java_lang_String) {
+func New_string_G(str string) (this *P_java_lang_String) {
 	this = &P_java_lang_String{}
 	this.value = make([]uint16, len(str))
 	for i := 0; i < len(str); i++ {

@@ -8,6 +8,7 @@ import (
 type GoFile struct {
 	FileName string
 	Package  string
+	Imports  [][2]string // import_path, alias
 	Globals  [][2]string //name type //TODO: handle const vs var
 	Struct   Struct
 	Methods  []Method
@@ -22,7 +23,7 @@ type Struct struct {
 type Method struct {
 	Name     string
 	Receiver string      // empty if static
-	Params   [][2]string //name type
+	Params   [][3]string //name, type, (import if available)
 	//TODO: code
 	Return string
 }
@@ -30,14 +31,16 @@ type Method struct {
 func Translate(class JClass) (g GoFile, err error) {
 	g.Package = class.Name[:strings.LastIndex(class.Name, "/")]
 	g.FileName = g.Package + "_" + strings.ReplaceAll(class.SrcFileName, ".java", ".go")
+	g.Imports = [][2]string{{"github.com/totallygamerjet/jb4go/java", "."}} //TODO: get other imports
+	sT, _ := getGoType(class.SuperName)
 	g.Struct = Struct{
 		Name:  ValidateName(class.Name, class.IsPublic),
-		Embed: getGoType(class.SuperName),
+		Embed: sT,
 	}
 	for _, v := range class.Fields {
 		var f [2]string
 		f[0] = ValidateName(v.Name, v.IsPublic)
-		f[1] = getGoType(v.Type)
+		f[1], _ = getGoType(v.Type)
 		if v.IsStatic {
 			g.Globals = append(g.Globals, f)
 		} else {
@@ -49,7 +52,7 @@ func Translate(class JClass) (g GoFile, err error) {
 			Name: translateMethodName(v, g.Struct),
 		}
 		if v.Return != "void" {
-			m.Return = getGoType(v.Return)
+			m.Return, _ = getGoType(v.Return)
 		}
 		var argN = 0
 		if !v.IsStatic {
@@ -59,7 +62,8 @@ func Translate(class JClass) (g GoFile, err error) {
 		var isArray = false
 		for _, v2 := range v.Params {
 			if isArray {
-				m.Params = append(m.Params, [2]string{"arg" + strconv.Itoa(argN), "[]" + getGoType(v2)})
+				t, i := getGoType(v2) //type and import
+				m.Params = append(m.Params, [3]string{"arg" + strconv.Itoa(argN), "[]" + t, i})
 				isArray = false
 				argN++
 				continue
@@ -68,7 +72,8 @@ func Translate(class JClass) (g GoFile, err error) {
 				isArray = true
 				continue
 			}
-			m.Params = append(m.Params, [2]string{"arg" + strconv.Itoa(argN), getGoType(v2)})
+			t, i := getGoType(v2)
+			m.Params = append(m.Params, [3]string{"arg" + strconv.Itoa(argN), t, i})
 			argN++
 		}
 		//TODO: code

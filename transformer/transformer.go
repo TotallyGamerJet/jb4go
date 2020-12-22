@@ -94,7 +94,7 @@ func translateParams(str string) (params []string, ret string) {
 			params = append(params, "long")
 		case 'L':
 			isName = true
-			temp = "L"
+			//temp = "L"
 		case 'S':
 			params = append(params, "short")
 		case 'Z':

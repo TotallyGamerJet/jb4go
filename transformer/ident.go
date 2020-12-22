@@ -29,13 +29,10 @@ func TranslateIdent(str string) string {
 		return "R"
 	case "void":
 		return "V"
-	case "Ljava/lang/String":
+	case "java/lang/String":
 		return "G"
 	default:
-		if strings.HasPrefix(str, "L") {
-			return strings.ReplaceAll(str[1:], "/", "_")
-		}
-		panic("unknown ident")
+		return strings.ReplaceAll(str[1:], "/", "_")
 	}
 }
 
@@ -88,25 +85,25 @@ func ValidateName(name string, public bool) string {
 	return name
 }
 
-func getGoType(jType string) string {
+func getGoType(jType string) (string, string) {
 	switch jType {
 	case "char":
-		return "uint16"
+		return "uint16", ""
 	case "short":
-		return "int16"
+		return "int16", ""
 	case "byte":
-		return "int8"
+		return "int8", ""
 	case "int":
-		return "int32"
+		return "int32", ""
 	case "long":
-		return "int64"
+		return "int64", ""
 	case "float":
-		return "float32"
+		return "float32", ""
 	case "double":
-		return "float64"
+		return "float64", ""
 	case "boolean":
-		return "bool"
+		return "bool", ""
 	default:
-		return "*" + ValidateName(jType, true) // is this right?
+		return "*" + ValidateName(jType, true), "github.com/totallygamerjet/jb4go/java" // is this right?
 	}
 }
