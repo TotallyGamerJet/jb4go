@@ -6,8 +6,13 @@ import (
 )
 
 type instruction struct {
+	loc      int // the instruction number
 	opcode   opcode
 	operands []byte
+}
+
+func (i instruction) index() int {
+	return int(int16(i.operands[0])<<8 | int16(i.operands[1]))
 }
 
 func (i instruction) String() string {
@@ -16,13 +21,13 @@ func (i instruction) String() string {
 
 type basicBlock []instruction
 
-func createBasicBlocks(instrs []instruction) (blocks []basicBlock, line2Block map[int]int) {
+func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 	// if a line number is in this slice it means that it is the first instruction of a block
 	// added 0 because a block starts at the beginning
 	var startOfBlock = []int{0}
-	for i, v := range instrs {
+	for _, v := range instrs {
 		if isTerminator(v) {
-			var next = i + len(v.operands) + 1
+			var next = v.loc + len(v.operands) + 1
 			//fmt.Print("op:", v.opcode, " break @", i, " start @", next)
 			if startOfBlock[len(startOfBlock)-1] != next { // avoid duplicates by checking if the last one eqls this one
 				startOfBlock = append(startOfBlock, next) // the next instruction is the beginning of a block
@@ -31,29 +36,26 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock, line2Block ma
 			if hasBranch(v) {
 				//fmt.Print(" branch to ", i+getBrOffset(v), "(", v.operands, ")")
 				// if this instruction branches to some location add it to the list
-				// because it is the beginning of a new basic block
-				startOfBlock = append(startOfBlock, i+getBrOffset(v)) // add the offset to the current instruction # to get next block start
+				// because it is the beginning of a new_ basic block
+				startOfBlock = append(startOfBlock, v.loc+getBrOffset(v)) // add the offset to the current instruction loc to get next block start
 			}
 			//fmt.Println()
 		}
 	}
 	// some instructions may jump backwards and therefore their starts are out of order
 	sort.Ints(startOfBlock)
-	// a map that takes line number integers and gives the block number
-	line2Block = make(map[int]int)
 	// loop through all but the last bc we add 1 to each one
 	for i, v := range startOfBlock[:len(startOfBlock)-1] {
 		// the next block is from this current start block # and the next one
 		blocks = append(blocks, instrs[v:startOfBlock[i+1]])
-		// the line is the current line start and its block # is the blocks' length - 1
-		line2Block[v] = len(blocks) - 1
 	}
-	return blocks, line2Block
+	return blocks
 }
 
 func readInstructions(b []byte) (instrs []instruction) {
 	for i := 0; i < len(b); i++ {
 		var instr = instruction{
+			loc:    i,
 			opcode: opcode(b[i]),
 		}
 		switch instr.opcode {
@@ -73,7 +75,7 @@ func readInstructions(b []byte) (instrs []instruction) {
 			if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt,
 			ifne, ifnonnull, ifnull, jsr, sipush, iinc, anewarray, checkcast,
 			getfield, getstatic, instanceof, invokespecial, invokestatic,
-			invokevirtual, ldc_w, ldc2_w, new, putfield, putstatic:
+			invokevirtual, ldc_w, ldc2_w, new_, putfield, putstatic:
 			// has two bytes
 			operN++
 			fallthrough
@@ -90,7 +92,7 @@ func readInstructions(b []byte) (instrs []instruction) {
 			}
 		}
 		instrs = append(instrs, instr)
-		for _, _ = range instr.operands {
+		for range instr.operands {
 			// add a nop instruction so that branches will go to the proper place
 			instrs = append(instrs, instruction{})
 		}
@@ -319,7 +321,7 @@ const (
 	invokestatic    opcode = 0xb8 //1011 1000	2: indexbyte1, indexbyte2	[arg1, arg2, ...] → result	invoke a static method and puts the result on the stack (might be void); the method is identified by method reference index in constant pool (indexbyte1 << 8 | indexbyte2)
 	invokeinterface opcode = 0xb9 //1011 1001	4: indexbyte1, indexbyte2, count, 0	objectref, [arg1, arg2, ...] → result	invokes an interface method on object objectref and puts the result on the stack (might be void); the interface method is identified by method reference index in constant pool (indexbyte1 << 8 | indexbyte2)
 	invokedynamic   opcode = 0xba //1011 1010	4: indexbyte1, indexbyte2, 0, 0	[arg1, [arg2 ...]] → result	invokes a dynamic method and puts the result on the stack (might be void); the method is identified by method reference index in constant pool (indexbyte1 << 8 | indexbyte2)
-	new             opcode = 0xbb //1011 1011	2: indexbyte1, indexbyte2	→ objectref	create new object of type identified by class reference in constant pool index (indexbyte1 << 8 | indexbyte2)
+	new_            opcode = 0xbb //1011 1011	2: indexbyte1, indexbyte2	→ objectref	create new_ object of type identified by class reference in constant pool index (indexbyte1 << 8 | indexbyte2)
 	newarray        opcode = 0xbc //1011 1100	1: atype	count → arrayref	create new array with count elements of primitive type identified by atype
 	anewarray       opcode = 0xbd //1011 1101	2: indexbyte1, indexbyte2	count → arrayref	create a new array of references of length count and component type identified by the class reference index (indexbyte1 << 8 | indexbyte2) in the constant pool
 	arraylength     opcode = 0xbe //1011 1110		arrayref → length	get the length of an array

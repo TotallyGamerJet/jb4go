@@ -57,7 +57,8 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		m.Params, m.Return = translateParams(info.GetDescriptor(raw))
 		m.Code, m.MaxStack, m.MaxLocals = info.GetCode()
 		instrs := readInstructions(m.Code)
-		/*blocks, lines2Blocks := */ createBasicBlocks(instrs)
+		blocks := createBasicBlocks(instrs)
+		createIntermediate(blocks, raw)
 		c.Methods[i] = m
 	}
 	return c, nil

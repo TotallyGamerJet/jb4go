@@ -195,7 +195,7 @@ func _() {
 	_ = x[invokestatic-184]
 	_ = x[invokeinterface-185]
 	_ = x[invokedynamic-186]
-	_ = x[new-187]
+	_ = x[new_-187]
 	_ = x[newarray-188]
 	_ = x[anewarray-189]
 	_ = x[arraylength-190]

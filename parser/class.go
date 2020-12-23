@@ -95,3 +95,36 @@ func (c *RawClass) GetSuperName() string {
 func (c *RawClass) IsPublic() bool {
 	return c.accessFlags&accPublic != 0
 }
+
+func (c *RawClass) GetClass(index int) string {
+	info := c.GetCP(index).(classInfo)
+	return c.nameFromIndex(info.nameIndex)
+}
+
+func (c *RawClass) GetNameAndType(index int) (string, string) {
+	info := c.GetCP(index).(nameAndTypeInfo)
+	return c.nameFromIndex(info.nameIndex), c.nameFromIndex(info.descriptorIndex)
+}
+
+// returns the class name, the name of the field and the type.
+// CLASSNAME, FIELD_NAME, TYPE
+func (c *RawClass) GetFieldRef(index int) (string, string, string) {
+	info := c.GetCP(index).(fieldRefInfo)
+	n, t := c.GetNameAndType(int(info.nameAndTypeIndex))
+	return c.GetClass(int(info.classIndex)), n, t
+}
+
+func (c *RawClass) GetMethodRef(index int) (string, string, string) {
+	info := c.GetCP(index).(methodRefInfo)
+	n, t := c.GetNameAndType(int(info.nameAndTypeIndex))
+	return c.GetClass(int(info.classIndex)), n, t
+}
+
+func (c *RawClass) GetConstant(index int) string {
+	switch info := c.GetCP(index); v := info.(type) {
+	case stringInfo:
+		return "`" + c.nameFromIndex(v.stringIndex) + "`"
+	default:
+		panic("unknown constant")
+	}
+}

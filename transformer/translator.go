@@ -1,7 +1,6 @@
 package transformer
 
 import (
-	"strconv"
 	"strings"
 )
 
@@ -54,18 +53,16 @@ func Translate(class JClass) (g GoFile, err error) {
 		if v.Return != "void" {
 			m.Return, _ = getGoType(v.Return)
 		}
-		var argN = 0
+		nextArg := getUniqueCounter("arg")
 		if !v.IsStatic {
-			m.Receiver = "arg" + strconv.Itoa(argN) + " *" + g.Struct.Name
-			argN++
+			m.Receiver = nextArg() + " *" + g.Struct.Name
 		}
 		var isArray = false
 		for _, v2 := range v.Params {
 			if isArray {
 				t, i := getGoType(v2) //type and import
-				m.Params = append(m.Params, [3]string{"arg" + strconv.Itoa(argN), "[]" + t, i})
+				m.Params = append(m.Params, [3]string{nextArg(), "[]" + t, i})
 				isArray = false
-				argN++
 				continue
 			}
 			if v2 == "[" {
@@ -73,8 +70,7 @@ func Translate(class JClass) (g GoFile, err error) {
 				continue
 			}
 			t, i := getGoType(v2)
-			m.Params = append(m.Params, [3]string{"arg" + strconv.Itoa(argN), t, i})
-			argN++
+			m.Params = append(m.Params, [3]string{nextArg(), t, i})
 		}
 		//TODO: code
 		g.Methods = append(g.Methods, m)
