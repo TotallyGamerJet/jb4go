@@ -21,12 +21,12 @@ func ReadMethodInfo(c *RawClass, p *Parser) (info MethodInfo) {
 }
 
 func (m *MethodInfo) GetName(class RawClass) string {
-	return class.nameFromIndex(m.nameIndex)
+	return class.GetUtf8(m.nameIndex)
 }
 
 // GetDescriptor returns a string representing the params and return type
 func (m *MethodInfo) GetDescriptor(class RawClass) string {
-	return class.nameFromIndex(m.descriptorIndex)
+	return class.GetUtf8(m.descriptorIndex)
 }
 
 // GetCode returns the code, max_stack size, max_local size

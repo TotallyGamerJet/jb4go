@@ -21,11 +21,11 @@ func ReadFieldInfo(c *RawClass, p *Parser) (info FieldInfo) {
 }
 
 func (info *FieldInfo) GetName(class RawClass) string {
-	return class.nameFromIndex(info.nameIndex)
+	return class.GetUtf8(info.nameIndex)
 }
 
 func (info *FieldInfo) GetType(class RawClass) string {
-	return class.nameFromIndex(info.descriptorIndex)
+	return class.GetUtf8(info.descriptorIndex)
 }
 
 func (info *FieldInfo) IsPublic() bool {

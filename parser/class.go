@@ -65,7 +65,7 @@ func (c *RawClass) GetFileName() string {
 		if src, ok := v.(sourceFileAttribute); !ok {
 			continue
 		} else {
-			return c.nameFromIndex(src.sourceFileIndex)
+			return c.GetUtf8(src.sourceFileIndex)
 		}
 	}
 	return c.GetName() + ".java" // if its not found use the classes' name plus ext
@@ -76,20 +76,18 @@ func (c *RawClass) GetCP(index int) CPInfo {
 	return c.constantPool[index-1]
 }
 
-func (c *RawClass) nameFromIndex(index uint16) string {
+func (c *RawClass) GetUtf8(index uint16) string {
 	return c.GetCP(int(index)).(utf8Info).str
 }
 
 // returns the name of this raw class
 func (c *RawClass) GetName() string {
-	info := c.GetCP(int(c.thisClass)).(classInfo)
-	return c.nameFromIndex(info.nameIndex)
+	return c.GetClass(int(c.thisClass))
 }
 
 // returns the name of the super object of this raw class
 func (c *RawClass) GetSuperName() string {
-	info := c.GetCP(int(c.superClass)).(classInfo)
-	return c.nameFromIndex(info.nameIndex)
+	return c.GetClass(int(c.superClass))
 }
 
 func (c *RawClass) IsPublic() bool {
@@ -98,12 +96,12 @@ func (c *RawClass) IsPublic() bool {
 
 func (c *RawClass) GetClass(index int) string {
 	info := c.GetCP(index).(classInfo)
-	return c.nameFromIndex(info.nameIndex)
+	return c.GetUtf8(info.nameIndex)
 }
 
 func (c *RawClass) GetNameAndType(index int) (string, string) {
 	info := c.GetCP(index).(nameAndTypeInfo)
-	return c.nameFromIndex(info.nameIndex), c.nameFromIndex(info.descriptorIndex)
+	return c.GetUtf8(info.nameIndex), c.GetUtf8(info.descriptorIndex)
 }
 
 // returns the class name, the name of the field and the type.
@@ -120,10 +118,12 @@ func (c *RawClass) GetMethodRef(index int) (string, string, string) {
 	return c.GetClass(int(info.classIndex)), n, t
 }
 
-func (c *RawClass) GetConstant(index int) string {
+// GetConstant returns the constant at the index as a string and a string representation
+// of the type
+func (c *RawClass) GetConstant(index int) (string, string) {
 	switch info := c.GetCP(index); v := info.(type) {
 	case stringInfo:
-		return "`" + c.nameFromIndex(v.stringIndex) + "`"
+		return "`" + c.GetUtf8(v.stringIndex) + "`", "java/lang/String"
 	default:
 		panic("unknown constant")
 	}

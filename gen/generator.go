@@ -3,9 +3,10 @@ package gen
 import (
 	"github.com/dave/jennifer/jen"
 	"github.com/totallygamerjet/jb4go/transformer"
+	"io"
 )
 
-func Generate(g transformer.GoFile) error {
+func Generate(g transformer.GoFile, w io.Writer) error {
 	f := jen.NewFile(g.Package)
 	for _, v := range g.Imports {
 		f.ImportAlias(v[0], v[1])
@@ -37,7 +38,7 @@ func Generate(g transformer.GoFile) error {
 		)
 		f.Line()
 	}
-	return f.Save(g.FileName)
+	return f.Render(w)
 }
 
 func genType(p [3]string) *jen.Statement {

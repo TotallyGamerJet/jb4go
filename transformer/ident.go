@@ -107,3 +107,37 @@ func getGoType(jType string) (string, string) {
 		return "*" + ValidateName(jType, true), "github.com/totallygamerjet/jb4go/java" // is this right?
 	}
 }
+
+// takes a shortened java type (ex. I for int) and returns the java type
+func getJavaType(str string) string {
+	switch str {
+	case "B":
+		return "byte"
+	case "C":
+		return "char"
+	case "D":
+		return "double"
+	case "F":
+		return "float"
+	case "I":
+		return "int"
+	case "J":
+		return "long"
+	case "S":
+		return "short"
+	case "Z":
+		return "boolean"
+	case "void":
+		return ""
+	default:
+		var out string
+		if strings.HasPrefix(str, "[") {
+			out += "[]"
+			str = str[1:] // consume [
+		}
+		if strings.HasPrefix(str, "L") && strings.HasSuffix(str, ";") {
+			out += str[1 : len(str)-1] // remove the beginning and end
+		}
+		return out
+	}
+}

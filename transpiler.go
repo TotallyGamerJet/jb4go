@@ -35,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(gFile)
-	err = gen.Generate(gFile)
+	err = gen.Generate(gFile, os.Stdout)
 	if err != nil {
 		log.Fatal("Failed to generate: ", err)
 	}
