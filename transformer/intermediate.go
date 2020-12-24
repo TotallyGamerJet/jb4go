@@ -37,93 +37,47 @@ func (s *stack) pop() (string, string) {
 	return v.v, v.t
 }
 
-type ssaInstruction struct {
-	Op          opcode
-	Type        string
-	Dest        string
-	Value       string
-	Args        []string // the first arg is the receive if is a method
-	Func        string
-	FDesc       string // describes the function params and return
-	HasReceiver bool   // does this method have a receiver
-	//Funcs []string
-	//Labels []string
-}
-
-func (i ssaInstruction) String() (s string) {
-	if len(i.Dest) > 0 {
-		if i.Dest != "_" && !strings.HasPrefix(i.Dest, "@") {
-			s += "var "
-		}
-		s += i.Dest + " " + i.Type + " = " + i.Value
-	}
-	if i.Func != "" {
-		if i.HasReceiver {
-			s += fmt.Sprintf("%s.%s(%s)", i.Args[0], i.Func, i.Args[1:])
-		} else {
-			s += fmt.Sprintf("%s(%s)", i.Func, i.Args)
-		}
-		s += "//" + i.Op.String()
-	} else if len(i.Args) > 0 {
-		s += fmt.Sprintf("%s %s", i.Op.String(), i.Args)
-	} else {
-		s += " " + i.Op.String()
-	}
-	return s
-}
-
-type ssaL []ssaInstruction
-
-func (s *ssaL) add(i ssaInstruction) {
-	*s = append(*s, i)
-}
-
 const (
 	intJ    = "int"
 	objRefJ = "ObjRef"
 )
 
 // creates an intermediate form of the code
-func createIntermediate(blocks []basicBlock, class parser.RawClass) []ssaL {
+func createIntermediate(blocks []basicBlock, class parser.RawClass) {
 	stack := make(stack, 0)
 	nextVar := getUniqueCounter("v")
-	//var inter = []string{prelude}
-	var cfg []ssaL
-	var ssa = make(ssaL, 0)
 	for _, block := range blocks {
-		ssa.add(ssaInstruction{Func: "case", Args: []string{strconv.Itoa(block[0].loc)}})
-		for _, inst := range block {
-			ssaI := ssaInstruction{Op: inst.opcode}
+		for i, inst := range block {
 			switch inst.opcode {
 			case nop: //ignore
 				continue
 			case aload_0, aload_1, aload_2, aload_3:
 				v := nextVar()
-				ssaI.Type = objRefJ
-				ssaI.Dest = v
-				ssaI.Value = localName + strconv.Itoa(int(inst.opcode-aload_0))
-				stack.push(v, objRefJ)
+				inst.Type = objRefJ
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.opcode-aload_0))
+				stack.push(v, inst.Type)
 			case iload:
 				v := nextVar()
-				ssaI.Type = intJ
-				ssaI.Dest = v
-				ssaI.Value = localName + strconv.Itoa(int(inst.operands[0]))
-				stack.push(v, intJ)
+				inst.Type = intJ
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				stack.push(v, inst.Type)
 			case iload_0, iload_1, iload_2, iload_3:
 				v := nextVar()
-				ssaI.Type = intJ
-				ssaI.Dest = v
-				ssaI.Value = localName + strconv.Itoa(int(inst.opcode-iload_0))
-				stack.push(v, intJ)
+				inst.Type = intJ
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.opcode-iload_0))
+				stack.push(v, inst.Type)
 			case astore_0, astore_1, astore_2, astore_3:
-				ssaI.Dest = localName + strconv.Itoa(int(inst.opcode-astore_0))
-				ssaI.Value, ssaI.Type = stack.pop()
+				inst.Dest = localName + strconv.Itoa(int(inst.opcode-astore_0))
+				inst.Value, inst.Type = stack.pop()
 			case istore:
-				ssaI.Dest = localName + strconv.Itoa(int(inst.operands[0]))
-				ssaI.Value, ssaI.Type = stack.pop()
+				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
+				inst.Value, inst.Type = stack.pop()
 			case istore_0, istore_1, istore_2, istore_3:
-				ssaI.Dest = localName + strconv.Itoa(int(inst.opcode-istore_0))
-				ssaI.Value, ssaI.Type = stack.pop()
+				inst.Dest = localName + strconv.Itoa(int(inst.opcode-istore_0))
+				inst.Value, inst.Type = stack.pop()
 			case invokespecial, invokevirtual, invokestatic:
 				c, n, t := class.GetMethodRef(inst.index())
 				p, _ := translateParams(t)
@@ -134,100 +88,97 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass) []ssaL {
 				}
 				if inst.opcode != invokestatic {
 					r, _ := stack.pop() // the receiver
-					ssaI.HasReceiver = true
-					ssaI.Args = append([]string{r}, params...) // start with receiver
+					inst.HasReceiver = true
+					inst.Args = append([]string{r}, params...) // start with receiver
 				} else {
-					ssaI.Args = params
+					inst.Args = params
 				}
 				m := c + "." + n + ":" + t
-				ssaI.Func = n
-				ssaI.FDesc = m
+				inst.Func = n
+				inst.FDesc = m
 				if strings.HasSuffix(t, ")V") { //  ends in void
-					ssaI.Dest = "_"
+					inst.Dest = "_"
 				} else {
 					v := nextVar()
-					ssaI.Dest = v
-					ssaI.Type = getJavaType(t[strings.LastIndex(t, ")")+1:])
-					stack.push(v, ssaI.Type)
+					inst.Dest = v
+					inst.Type = getJavaType(t[strings.LastIndex(t, ")")+1:])
+					stack.push(v, inst.Type)
 				}
 			case new_:
 				v := nextVar()
 				name := class.GetClass(inst.index())
-				ssaI.Type = name
-				ssaI.Dest = v
-				ssaI.Args = []string{name}
-				stack.push(v, ssaI.Type)
+				inst.Type = name
+				inst.Dest = v
+				inst.Args = []string{name}
+				stack.push(v, inst.Type)
 			case dup:
 				v := nextVar()
 				s, t := stack.pop()
 				stack.push(s, t)
 				stack.push(v, t)
-				ssaI.Type = t
-				ssaI.Dest = v
-				ssaI.Value = s
+				inst.Type = t
+				inst.Dest = v
+				inst.Value = s
 			case irem:
 				v := nextVar()
 				i2, _ := stack.pop()
 				i1, _ := stack.pop()
-				ssaI.Type = intJ
-				ssaI.Dest = v
-				ssaI.Args = []string{i1, i2}
-				stack.push(v, ssaI.Type)
+				inst.Type = intJ
+				inst.Dest = v
+				inst.Args = []string{i1, i2}
+				stack.push(v, inst.Type)
 			case return_:
 			case ireturn:
 				var p string
-				p, ssaI.Type = stack.pop()
-				ssaI.Args = []string{p}
+				p, inst.Type = stack.pop()
+				inst.Args = []string{p}
 			case areturn:
 				var p string
-				p, ssaI.Type = stack.pop()
-				ssaI.Args = []string{p}
+				p, inst.Type = stack.pop()
+				inst.Args = []string{p}
 			case getstatic:
 				v := nextVar()
 				var n, f string
-				n, f, ssaI.Type = class.GetFieldRef(inst.index())
-				ssaI.Type = getJavaType(ssaI.Type) // cleans up the type if has L...;
-				ssaI.Dest = v
-				ssaI.Args = []string{n, f}
-				stack.push(v, ssaI.Type)
+				n, f, inst.Type = class.GetFieldRef(inst.index())
+				inst.Type = getJavaType(inst.Type) // cleans up the type if has L...;
+				inst.Dest = v
+				inst.Args = []string{n, f}
+				stack.push(v, inst.Type)
 			case ldc:
 				v := nextVar()
-				ssaI.Value, ssaI.Type = class.GetConstant(int(inst.operands[0]))
-				ssaI.Dest = v
-				stack.push(v, ssaI.Type)
+				inst.Value, inst.Type = class.GetConstant(int(inst.operands[0]))
+				inst.Dest = v
+				stack.push(v, inst.Type)
 			case putfield:
-				ssaI.Value, _ = stack.pop()
+				inst.Value, _ = stack.pop()
 				ref, _ := stack.pop()
 				_, f, t := class.GetFieldRef(inst.index())
-				ssaI.Type = t
-				ssaI.Dest = ref + "." + f
+				inst.Type = t
+				inst.Dest = ref + "." + f
 			case getfield:
 				v := nextVar()
 				ref, _ := stack.pop()
 				_, f, t := class.GetFieldRef(inst.index())
-				ssaI.Type = t
-				ssaI.Dest = v
-				ssaI.Value = ref + "." + f
-				stack.push(v, ssaI.Type)
+				inst.Type = t
+				inst.Dest = v
+				inst.Value = ref + "." + f
+				stack.push(v, inst.Type)
 			case ifge:
 				v, _ := stack.pop()
-				ssaI.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
 			case ifne:
 				v, _ := stack.pop()
-				ssaI.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
 			case goto_:
-				ssaI.Args = []string{strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{strconv.Itoa(inst.index() + inst.loc)}
 			default:
 				panic("unknown opcode: " + inst.opcode.String())
 			}
-			ssa.add(ssaI)
-			fmt.Println(ssaI)
+			block[i] = inst // update the instruction
+			//fmt.Println(inst)
 		}
-		cfg = append(cfg, ssa)
-		ssa = make(ssaL, 0)
 	}
 	if len(stack) != 0 { // sanity check to make sure nothing went wrong
 		panic(fmt.Sprintf("stack isn't empty: %s", stack))
 	}
-	return cfg
 }

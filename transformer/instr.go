@@ -3,20 +3,50 @@ package transformer
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 type instruction struct {
 	loc      int // the instruction number
 	opcode   opcode
 	operands []byte
+
+	Type        string   // the java type of the new variable
+	Dest        string   // the varible or field name
+	Value       string   // if the inst is a const this is set
+	Args        []string // the first arg is the receiver if it's a method
+	Func        string   // Function name if is a function
+	FDesc       string   // describes the function params and return
+	HasReceiver bool     // does this method have a receiver
 }
 
 func (i instruction) index() int {
 	return int(int16(i.operands[0])<<8 | int16(i.operands[1]))
 }
 
-func (i instruction) String() string {
-	return "opcode:" + i.opcode.String() + " operands:" + fmt.Sprint(i.operands)
+func (i instruction) String() (s string) {
+	if i.Type == "" && i.Func != "" && len(i.Dest) <= 0 {
+		return "opcode:" + i.opcode.String() + " operands:" + fmt.Sprint(i.operands)
+	}
+	if len(i.Dest) > 0 {
+		if i.Dest != "_" && !strings.HasPrefix(i.Dest, "@") {
+			s += "var "
+		}
+		s += i.Dest + " " + i.Type + " = " + i.Value
+	}
+	if i.Func != "" {
+		if i.HasReceiver {
+			s += fmt.Sprintf("%s.%s(%s)", i.Args[0], i.Func, i.Args[1:])
+		} else {
+			s += fmt.Sprintf("%s(%s)", i.Func, i.Args)
+		}
+		s += "//" + i.opcode.String()
+	} else if len(i.Args) > 0 {
+		s += fmt.Sprintf("%s %s", i.opcode.String(), i.Args)
+	} else {
+		s += " " + i.opcode.String()
+	}
+	return s
 }
 
 type basicBlock []instruction
