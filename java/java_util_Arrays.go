@@ -1,6 +1,6 @@
 package java
 
-func P_java_util_Arrays_copyOfRange_RCII_RC(original []uint16, from, to int32) []uint16 {
+func java_util_Arrays_copyOfRange_RCII_RC(original []uint16, from, to int32) []uint16 {
 	newLength := to - from
 	if newLength < 0 {
 		//TODO: throw new IllegalArgumentException(from + " > " + to);

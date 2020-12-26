@@ -9,14 +9,6 @@ import (
 
 const (
 	localName = "@local"
-	prelude   = `var currentLabel = 0
-	controlFlowLoop:
-	for {
-		switch currentLabel {`
-	envoi = `default:
-			panic("unexpected control flow")
-		}
-	}`
 )
 
 type stack []struct {
@@ -43,19 +35,23 @@ const (
 )
 
 // creates an intermediate form of the code
-func createIntermediate(blocks []basicBlock, class parser.RawClass) {
+func createIntermediate(blocks []basicBlock, class parser.RawClass, params []string) {
 	stack := make(stack, 0)
 	nextVar := getUniqueCounter("v")
 	for _, block := range blocks {
 		for i, inst := range block {
-			switch inst.opcode {
+			switch inst.Op {
 			case nop: //ignore
 				continue
 			case aload_0, aload_1, aload_2, aload_3:
 				v := nextVar()
-				inst.Type = objRefJ
+				if len(params) > 0 {
+					inst.Type = params[int(inst.Op-aload_0)]
+				} else {
+					inst.Type = objRefJ //TODO: remove this once all stores will add to params
+				}
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.opcode-aload_0))
+				inst.Value = localName + strconv.Itoa(int(inst.Op-aload_0))
 				stack.push(v, inst.Type)
 			case iload:
 				v := nextVar()
@@ -67,16 +63,22 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass) {
 				v := nextVar()
 				inst.Type = intJ
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.opcode-iload_0))
+				inst.Value = localName + strconv.Itoa(int(inst.Op-iload_0))
 				stack.push(v, inst.Type)
 			case astore_0, astore_1, astore_2, astore_3:
-				inst.Dest = localName + strconv.Itoa(int(inst.opcode-astore_0))
+				inst.Dest = localName + strconv.Itoa(int(inst.Op-astore_0))
 				inst.Value, inst.Type = stack.pop()
+				if int(inst.Op-astore_0) > len(params) {
+					var p [4]string
+					copy(p[:], params)
+					params = p[:]
+				}
+				params[int(inst.Op-astore_0)] = inst.Type
 			case istore:
 				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
 				inst.Value, inst.Type = stack.pop()
 			case istore_0, istore_1, istore_2, istore_3:
-				inst.Dest = localName + strconv.Itoa(int(inst.opcode-istore_0))
+				inst.Dest = localName + strconv.Itoa(int(inst.Op-istore_0))
 				inst.Value, inst.Type = stack.pop()
 			case invokespecial, invokevirtual, invokestatic:
 				c, n, t := class.GetMethodRef(inst.index())
@@ -86,8 +88,11 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass) {
 					v, _ := stack.pop()
 					params = append([]string{v}, params...)
 				}
-				if inst.opcode != invokestatic {
-					r, _ := stack.pop() // the receiver
+				if inst.Op != invokestatic {
+					r, t := stack.pop()                     // the receiver
+					if inst.Op == invokespecial && c != t { // invokespecial calls inits so add the super class
+						r += "." + ValidateName(c)
+					}
 					inst.HasReceiver = true
 					inst.Args = append([]string{r}, params...) // start with receiver
 				} else {
@@ -147,6 +152,10 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass) {
 			case ldc:
 				v := nextVar()
 				inst.Value, inst.Type = class.GetConstant(int(inst.operands[0]))
+				switch inst.Type { // do any necessary conversions for this constant
+				case "java/lang/String":
+					inst.Value = fmt.Sprintf("New_string_G(%s)", inst.Value)
+				}
 				inst.Dest = v
 				stack.push(v, inst.Type)
 			case putfield:
@@ -165,14 +174,14 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass) {
 				stack.push(v, inst.Type)
 			case ifge:
 				v, _ := stack.pop()
-				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
 			case ifne:
 				v, _ := stack.pop()
-				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
 			case goto_:
-				inst.Args = []string{strconv.Itoa(inst.index() + inst.loc)}
+				inst.Args = []string{strconv.Itoa(inst.index() + inst.Loc)}
 			default:
-				panic("unknown opcode: " + inst.opcode.String())
+				panic("unknown Op: " + inst.Op.String())
 			}
 			block[i] = inst // update the instruction
 			//fmt.Println(inst)

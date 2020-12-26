@@ -24,14 +24,14 @@ type JField struct {
 }
 
 type JMethod struct {
-	Name      string   `json:"name"`
-	IsPublic  bool     `json:"public"`
-	IsStatic  bool     `json:"static"`
-	Params    []string `json:"params"`
-	Code      []byte   `json:"code"`
-	MaxStack  int      `json:"maxStack"`
-	MaxLocals int      `json:"maxLocals"`
-	Return    string   `json:"return"`
+	Name      string       `json:"name"`
+	IsPublic  bool         `json:"public"`
+	IsStatic  bool         `json:"static"`
+	Params    []string     `json:"params"`
+	Code      []basicBlock `json:"code"`
+	MaxStack  int          `json:"maxStack"`
+	MaxLocals int          `json:"maxLocals"`
+	Return    string       `json:"return"`
 }
 
 func Simplify(raw parser.RawClass) (c JClass, err error) {
@@ -55,60 +55,18 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		m.IsPublic = info.IsPublic()
 		m.IsStatic = info.IsStatic()
 		m.Params, m.Return = translateParams(info.GetDescriptor(raw))
-		m.Code, m.MaxStack, m.MaxLocals = info.GetCode()
-		instrs := readInstructions(m.Code)
+		var code []byte
+		code, m.MaxStack, m.MaxLocals = info.GetCode()
+		instrs := readInstructions(code)
 		blocks := createBasicBlocks(instrs)
-		createIntermediate(blocks, raw)
+		var params []string
+		copy(params, m.Params)
+		if !m.IsStatic {
+			params = append([]string{ValidateName(c.Name)}, params...)
+		}
+		createIntermediate(blocks, raw, params)
+		m.Code = blocks
 		c.Methods[i] = m
 	}
 	return c, nil
-}
-
-func translateParams(str string) (params []string, ret string) {
-	var isName = false // true if reading in class isName
-	var temp string
-	for _, v := range str {
-		if isName {
-			if v != ';' {
-				temp += string(v)
-			} else {
-				// end of class name
-				params = append(params, temp)
-				temp = ""
-				isName = false
-			}
-			continue
-		}
-		switch v {
-		case '(', ')': // ignore
-		case 'B':
-			params = append(params, "byte")
-		case 'C':
-			params = append(params, "char")
-		case 'D':
-			params = append(params, "double")
-		case 'F':
-			params = append(params, "float")
-		case 'I':
-			params = append(params, "int")
-		case 'J':
-			params = append(params, "long")
-		case 'L':
-			isName = true
-			//temp = "L"
-		case 'S':
-			params = append(params, "short")
-		case 'Z':
-			params = append(params, "boolean")
-		case 'V':
-			params = append(params, "void")
-		case '[':
-			params = append(params, "[")
-		}
-	}
-	if len(params) > 0 {
-		ret = params[len(params)-1]
-		params = params[:len(params)-1]
-	}
-	return params, ret
 }

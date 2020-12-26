@@ -7,12 +7,12 @@ import (
 )
 
 type instruction struct {
-	loc      int // the instruction number
-	opcode   opcode
+	Loc      int // the instruction number
+	Op       opcode
 	operands []byte
 
 	Type        string   // the java type of the new variable
-	Dest        string   // the varible or field name
+	Dest        string   // the variable or field name
 	Value       string   // if the inst is a const this is set
 	Args        []string // the first arg is the receiver if it's a method
 	Func        string   // Function name if is a function
@@ -26,7 +26,7 @@ func (i instruction) index() int {
 
 func (i instruction) String() (s string) {
 	if i.Type == "" && i.Func != "" && len(i.Dest) <= 0 {
-		return "opcode:" + i.opcode.String() + " operands:" + fmt.Sprint(i.operands)
+		return "Op:" + i.Op.String() + " operands:" + fmt.Sprint(i.operands)
 	}
 	if len(i.Dest) > 0 {
 		if i.Dest != "_" && !strings.HasPrefix(i.Dest, "@") {
@@ -40,11 +40,11 @@ func (i instruction) String() (s string) {
 		} else {
 			s += fmt.Sprintf("%s(%s)", i.Func, i.Args)
 		}
-		s += "//" + i.opcode.String()
+		s += "//" + i.Op.String()
 	} else if len(i.Args) > 0 {
-		s += fmt.Sprintf("%s %s", i.opcode.String(), i.Args)
+		s += fmt.Sprintf("%s %s", i.Op.String(), i.Args)
 	} else {
-		s += " " + i.opcode.String()
+		s += " " + i.Op.String()
 	}
 	return s
 }
@@ -57,19 +57,16 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 	var startOfBlock = []int{0}
 	for _, v := range instrs {
 		if isTerminator(v) {
-			var next = v.loc + len(v.operands) + 1
-			//fmt.Print("op:", v.opcode, " break @", i, " start @", next)
+			var next = v.Loc + len(v.operands) + 1
 			if startOfBlock[len(startOfBlock)-1] != next { // avoid duplicates by checking if the last one eqls this one
 				startOfBlock = append(startOfBlock, next) // the next instruction is the beginning of a block
 			}
 			// ignore the operands
 			if hasBranch(v) {
-				//fmt.Print(" branch to ", i+getBrOffset(v), "(", v.operands, ")")
 				// if this instruction branches to some location add it to the list
 				// because it is the beginning of a new_ basic block
-				startOfBlock = append(startOfBlock, v.loc+getBrOffset(v)) // add the offset to the current instruction loc to get next block start
+				startOfBlock = append(startOfBlock, v.Loc+getBrOffset(v)) // add the offset to the current instruction Loc to get next block start
 			}
-			//fmt.Println()
 		}
 	}
 	// some instructions may jump backwards and therefore their starts are out of order
@@ -85,15 +82,15 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 func readInstructions(b []byte) (instrs []instruction) {
 	for i := 0; i < len(b); i++ {
 		var instr = instruction{
-			loc:    i,
-			opcode: opcode(b[i]),
+			Loc: i,
+			Op:  opcode(b[i]),
 		}
-		switch instr.opcode {
+		switch instr.Op {
 		case wide, lookupswitch, tableswitch:
 			panic("not implemented") //TODO: implement
 		}
 		var operN = 0 // # of operands to read in
-		switch instr.opcode {
+		switch instr.Op {
 		case goto_w, jsr_w, invokedynamic, invokeinterface:
 			// has 4 operands
 			operN++
@@ -133,7 +130,7 @@ func readInstructions(b []byte) (instrs []instruction) {
 // getBrOffset returns the offset of a branch instruction.
 // If a branch instruction is not sent the function behavior is undefined.
 func getBrOffset(instr instruction) int {
-	switch instr.opcode {
+	switch instr.Op {
 	case goto_w, jsr_w:
 		panic("not implemented") // TODO: implement
 	}
@@ -141,7 +138,7 @@ func getBrOffset(instr instruction) int {
 }
 
 func hasBranch(instr instruction) bool {
-	switch instr.opcode {
+	switch instr.Op {
 	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
 		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w:
 		return true
@@ -150,7 +147,7 @@ func hasBranch(instr instruction) bool {
 }
 
 func isTerminator(instr instruction) bool {
-	switch instr.opcode {
+	switch instr.Op {
 	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
 		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w,
 		//invokeinterface, invokedynamic, invokevirtual, invokespecial, invokestatic,
@@ -160,9 +157,9 @@ func isTerminator(instr instruction) bool {
 	return false
 }
 
+//go:generate stringer -type=opcode
 type opcode byte
 
-//go:generate stringer -type=opcode
 const (
 	nop             opcode = 0x00 //0000 0000		[No change]	perform no operation
 	aconst_null     opcode = 0x01 //0000 0001		→ null	push a null reference onto the stack

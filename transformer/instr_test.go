@@ -10,6 +10,6 @@ func Test_readInstructions(t *testing.T) {
 	i := readInstructions(b)
 	assert.Equal(t, []instruction{
 		{0, iload_2, nil},
-		{loc: 1, opcode: ifge, operands: []byte{0x00, 0x27}}, {}, {},
+		{Loc: 1, Op: ifge, operands: []byte{0x00, 0x27}}, {}, {},
 	}, i)
 }

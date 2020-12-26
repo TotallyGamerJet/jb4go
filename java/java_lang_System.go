@@ -1,8 +1,10 @@
 package java
 
-var P_java_lang_System_out = &P_java_io_PrintStream{}
-var P_java_lang_System_In []byte = nil //TODO:
+import "os"
 
-type P_java_lang_System = struct {
-	*P_java_lang_Object
+var java_lang_System_out = &java_io_PrintStream{}
+var java_lang_System_in = &java_io_InputStream{input: os.Stdin}
+
+type java_lang_System = struct {
+	*java_lang_Object
 }

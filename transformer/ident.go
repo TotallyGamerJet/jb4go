@@ -32,7 +32,7 @@ func TranslateIdent(str string) string {
 	case "java/lang/String":
 		return "G"
 	default:
-		return strings.ReplaceAll(str[1:], "/", "_")
+		return strings.ReplaceAll(str, "/", "_")
 	}
 }
 
@@ -60,7 +60,7 @@ func toGoType(javaType string, f *jen.Statement) {
 	case "void": // do nothing
 	default:
 		if strings.HasPrefix(javaType, "L") {
-			name := ValidateName(strings.ReplaceAll(javaType[1:], "/", "_"), true)
+			name := ValidateName(strings.ReplaceAll(javaType[1:], "/", "_"))
 			f.Op("*").Qual("github.com/totallygamerjet/java", name)
 			return
 		}
@@ -69,42 +69,42 @@ func toGoType(javaType string, f *jen.Statement) {
 }
 
 // takes in a name and its visibility and converts it to a valid name
-func ValidateName(name string, public bool) string {
+func ValidateName(name string) string {
 	if strings.HasPrefix(name, "L") && strings.HasSuffix(name, ";") {
 		name = name[1 : len(name)-1] // trim off the l and ;
 	}
 	name = strings.ReplaceAll(name, "/", "_")
-	if public {
-		name = "P_" + name
-	} else { // private method
-		name = "_" + name
-	}
-	if jen.IsReservedWord(name) { // add _ if name is reversed
-		name += "_"
-	}
+	//if public {
+	//	name = "P_" + name
+	//} else { // private method
+	//	name = "_" + name
+	//}
+	//if jen.IsReservedWord(name) { // add _ if name is reversed
+	//	name += "_"
+	//}
 	return name
 }
 
-func getGoType(jType string) (string, string) {
+func getGoType(jType string) string {
 	switch jType {
 	case "char":
-		return "uint16", ""
+		return "uint16"
 	case "short":
-		return "int16", ""
+		return "int16"
 	case "byte":
-		return "int8", ""
+		return "int8"
 	case "int":
-		return "int32", ""
+		return "int32"
 	case "long":
-		return "int64", ""
+		return "int64"
 	case "float":
-		return "float32", ""
+		return "float32"
 	case "double":
-		return "float64", ""
+		return "float64"
 	case "boolean":
-		return "bool", ""
+		return "bool"
 	default:
-		return "*" + ValidateName(jType, true), "github.com/totallygamerjet/jb4go/java" // is this right?
+		return "*" + ValidateName(jType) // is this right?
 	}
 }
 
@@ -140,4 +140,53 @@ func getJavaType(str string) string {
 		}
 		return out
 	}
+}
+
+func translateParams(str string) (params []string, ret string) {
+	var isName = false // true if reading in class isName
+	var temp string
+	for _, v := range str {
+		if isName {
+			if v != ';' {
+				temp += string(v)
+			} else {
+				// end of class name
+				params = append(params, temp)
+				temp = ""
+				isName = false
+			}
+			continue
+		}
+		switch v {
+		case '(', ')': // ignore
+		case 'B':
+			params = append(params, "byte")
+		case 'C':
+			params = append(params, "char")
+		case 'D':
+			params = append(params, "double")
+		case 'F':
+			params = append(params, "float")
+		case 'I':
+			params = append(params, "int")
+		case 'J':
+			params = append(params, "long")
+		case 'L':
+			isName = true
+			//temp = "L"
+		case 'S':
+			params = append(params, "short")
+		case 'Z':
+			params = append(params, "boolean")
+		case 'V':
+			params = append(params, "void")
+		case '[':
+			params = append(params, "[")
+		}
+	}
+	if len(params) > 0 {
+		ret = params[len(params)-1]
+		params = params[:len(params)-1]
+	}
+	return params, ret
 }

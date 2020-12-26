@@ -34,7 +34,7 @@ func Generate(g transformer.GoFile, w io.Writer) error {
 			fn.Id(v.Return)
 		}
 		fn.Block(
-		//TODO: write code
+			fn.Commentf(`/* %s */`, v.Code),
 		)
 		f.Line()
 	}
@@ -43,15 +43,15 @@ func Generate(g transformer.GoFile, w io.Writer) error {
 
 func genType(p [3]string) *jen.Statement {
 	s := jen.Id(p[0])
-	if p[2] != "" { // check if this type has an import
-		s.Qual(p[2], p[1])
-		return s
-	}
+	//if p[2] != "" { // check if this type has an import
+	//	s.Qual(p[2], p[1])
+	//	return s
+	//}
 	switch p[1] {
 	case "int32":
 		s.Int32()
 	default:
-		panic("not implemented")
+		s.Id(p[1])
 	}
 	return s
 }

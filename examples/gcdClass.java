@@ -16,7 +16,7 @@ public class gcdClass {
             System.out.print("Enter second number: ");
             int sec = s.nextInt();
             int gcd = gcd(f, sec);
-            System.out.print("GCD is: "+ gcd);
+            System.out.println("GCD is: "+ gcd);
         }
     }
 

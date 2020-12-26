@@ -1,1 +1,3 @@
-module "github.com/totallygamerjet/jb4go/java"
+module github.com/totallygamerjet/jb4go/java
+
+go 1.15

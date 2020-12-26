@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/totallygamerjet/jb4go/gen"
 	"github.com/totallygamerjet/jb4go/parser"
@@ -10,8 +9,6 @@ import (
 	"os"
 )
 
-//https://www.mirkosertic.de/blog/2017/06/compiling-bytecode-to-javascript/
-//https://tomassetti.me/how-to-write-a-transpiler/
 func main() {
 	f, err := os.Open("./examples/gcdClass.class") //TODO: handle .jar files
 	if err != nil {
@@ -25,17 +22,21 @@ func main() {
 	if err != nil {
 		log.Fatal("Couldn't simplify raw class: ", err)
 	}
-	j, err := json.MarshalIndent(class, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(j))
+	//j, err := json.MarshalIndent(class, "", "\t")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println(string(j))
 	gFile, err := transformer.Translate(class)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(gFile)
-	err = gen.Generate(gFile, os.Stdout)
+	o, err := os.OpenFile("out", os.O_CREATE, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = gen.Generate(gFile, o)
 	if err != nil {
 		log.Fatal("Failed to generate: ", err)
 	}
