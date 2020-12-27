@@ -8,7 +8,6 @@ import (
 type GoFile struct {
 	FileName string
 	Package  string
-	Imports  [][2]string // import_path, alias
 	Globals  [][2]string //name type //TODO: handle const vs var
 	Struct   Struct
 	Methods  []Method
@@ -29,7 +28,7 @@ type Method struct {
 }
 
 func Translate(class JClass) (g GoFile, err error) {
-	g.Package = class.Name[:strings.LastIndex(class.Name, "/")]
+	g.Package = "main" // the generated code should be runnable
 	g.FileName = g.Package + "_" + strings.ReplaceAll(class.SrcFileName, ".java", ".go")
 	sT := getGoType(class.SuperName)
 	g.Struct = Struct{
@@ -74,8 +73,16 @@ func Translate(class JClass) (g GoFile, err error) {
 		}
 		m.Code = translateCode(v.Code)
 		g.Methods = append(g.Methods, m)
-		fmt.Println(m.Code)
-
+		if v.Name == "main" && v.IsStatic && v.Return == "void" { // add a real main method to call the java generated one
+			g.Methods = append(g.Methods, Method{
+				Name: "main",
+				Code: `args := make([]*java_lang_String, len(os.Args))
+for i, v := range os.Args {
+	args[i] = New_string_G(v)
+}
+` + m.Name + `(args)`,
+			})
+		}
 	}
 	return g, nil
 }
