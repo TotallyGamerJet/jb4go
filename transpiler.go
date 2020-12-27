@@ -22,17 +22,12 @@ func main() {
 	if err != nil {
 		log.Fatal("Couldn't simplify raw class: ", err)
 	}
-	//j, err := json.MarshalIndent(class, "", "\t")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Println(string(j))
 	gFile, err := transformer.Translate(class)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(gFile)
-	o, err := os.OpenFile("out", os.O_CREATE, 0755)
+	o, err := os.OpenFile(gFile.FileName, os.O_CREATE, 0755)
 	if err != nil {
 		log.Fatal(err)
 	}

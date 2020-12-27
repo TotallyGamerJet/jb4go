@@ -31,7 +31,6 @@ type Method struct {
 func Translate(class JClass) (g GoFile, err error) {
 	g.Package = class.Name[:strings.LastIndex(class.Name, "/")]
 	g.FileName = g.Package + "_" + strings.ReplaceAll(class.SrcFileName, ".java", ".go")
-	//g.Imports = [][2]string{{"github.com/totallygamerjet/jb4go/java", "."}} //TODO: get other imports
 	sT := getGoType(class.SuperName)
 	g.Struct = Struct{
 		Name:  ValidateName(class.Name),
@@ -78,7 +77,6 @@ func Translate(class JClass) (g GoFile, err error) {
 		fmt.Println(m.Code)
 
 	}
-	panic("AAAA")
 	return g, nil
 }
 

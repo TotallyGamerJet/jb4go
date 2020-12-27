@@ -1,0 +1,19 @@
+package {{ .Package }}
+
+{{- if gt (len .Globals)  0 -}}
+var (
+    {{- range $i, $e := .Globals -}}
+    {{index $e 0}} {{index $e 1}}
+    {{- end -}}
+)
+{{- end}}
+{{ $s := .Struct }}
+type {{ $s.Name }} struct {
+    {{ $s.Embed}}
+    {{- /* TODO: FIELDS */}}
+}
+{{ range .Methods }}
+func {{ if .Receiver}}({{ .Receiver }}) {{end}}{{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+	{{.Code -}}
+}
+{{end}}
