@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	f, err := os.Open("./examples/gcdClass.class") //TODO: handle .jar files
+	f, err := os.Open("./examples/Employee.class") //TODO: handle .jar files
 	if err != nil {
 		log.Fatal(err)
 	}

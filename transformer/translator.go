@@ -29,12 +29,12 @@ type Method struct {
 
 func Translate(class JClass) (g GoFile, err error) {
 	g.Package = "main" // the generated code should be runnable
-	g.FileName = g.Package + "_" + strings.ReplaceAll(class.SrcFileName, ".java", ".go")
 	sT := getGoType(class.SuperName)
 	g.Struct = Struct{
 		Name:  ValidateName(class.Name),
 		Embed: sT,
 	}
+	g.FileName = g.Struct.Name + ".go" // I expect the filename to be the same as the class name
 	for _, v := range class.Fields {
 		var f [2]string
 		f[0] = ValidateName(v.Name)
@@ -107,8 +107,8 @@ func translateMethodName(mName, sName, Return string, isStatic, _ bool, params [
 
 // translateCode takes instructions in basic blocks and converts them to valid Go and returns it as a string
 func translateCode(blocks []basicBlock) string {
-	vars := strings.Builder{}
-	b := strings.Builder{}
+	vars := strings.Builder{} // stores all the variables at the top of the function
+	b := strings.Builder{}    // code goes in here
 	for _, block := range blocks {
 		b.WriteString(fmt.Sprintf("label%d:\n", block[0].Loc))
 		for _, inst := range block {
@@ -123,7 +123,9 @@ func translateCode(blocks []basicBlock) string {
 				if inst.Type != "" {
 					t = getGoType(inst.Type)
 				}
-				vars.WriteString(fmt.Sprintf("var %s %s\n", inst.Dest, t))
+				if !strings.Contains(inst.Dest, ".") { // ignore fields in the var list
+					vars.WriteString(fmt.Sprintf("var %s %s\n", inst.Dest, t))
+				}
 				b.WriteString(fmt.Sprintf("%s = ", inst.Dest))
 			}
 			switch {
@@ -144,7 +146,7 @@ func translateCode(blocks []basicBlock) string {
 				params, ret := translateParams(inst.FDesc[strings.Index(inst.FDesc, ":")+1:])
 				sName := ValidateName(inst.FDesc[:strings.Index(inst.FDesc, ".")]) //TODO: not always true
 				b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
-			default:
+			default: // any complicated instructions go here
 				switch inst.Op {
 				case getstatic:
 					b.WriteString(fmt.Sprintf("%s_%s", ValidateName(inst.Args[0]), inst.Args[1]))

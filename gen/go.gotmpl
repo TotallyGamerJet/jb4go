@@ -10,7 +10,9 @@ var (
 {{ $s := .Struct }}
 type {{ $s.Name }} struct {
     {{ $s.Embed}}
-    {{- /* TODO: FIELDS */}}
+    {{- range $s.Fields}}
+    {{index . 0}} {{index . 1}}
+    {{- end }}
 }
 {{ range .Methods }}
 func {{ if .Receiver}}({{ .Receiver }}) {{end}}{{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {

@@ -59,7 +59,7 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		code, m.MaxStack, m.MaxLocals = info.GetCode()
 		instrs := readInstructions(code)
 		blocks := createBasicBlocks(instrs)
-		var params []string
+		var params = make([]string, len(m.Params))
 		copy(params, m.Params)
 		if !m.IsStatic {
 			params = append([]string{ValidateName(c.Name)}, params...)
