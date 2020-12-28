@@ -79,15 +79,23 @@ func Translate(class JClass) (g GoFile, err error) {
 		if v.Name == "main" && v.IsStatic && v.Return == "void" { // add a real main method to call the java generated one
 			g.Methods = append(g.Methods, Method{
 				Name: "main",
-				Code: `args := make([]*java_lang_String, len(os.Args))
-for i, v := range os.Args {
-	args[i] = New_string_G(v)
-}
-` + m.Name + `(args)`,
+				Code: getMain(m.Name, len(m.Params)),
 			})
 		}
 	}
 	return g, nil
+}
+
+func getMain(name string, paramsN int) string {
+	if paramsN > 0 {
+		return `args := make([]*java_lang_String, len(os.Args))
+for i, v := range os.Args {
+	args[i] = New_string_G(v)
+}
+` + name + `(args)
+`
+	}
+	return name + "()\n"
 }
 
 func translateMethodName(mName, sName, Return string, isStatic, _ bool, params []string) (name string) {
@@ -174,8 +182,10 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("%s * %s", inst.Args[0], inst.Args[1]))
 				case ddiv:
 					b.WriteString(fmt.Sprintf("%s / %s", inst.Args[0], inst.Args[1]))
+				case i2d:
+					b.WriteString(fmt.Sprintf("float64(%s)", inst.Args[0]))
 				default:
-					b.WriteString("#####" + inst.String())
+					panic(inst.String())
 				}
 			}
 			b.WriteRune('\n')

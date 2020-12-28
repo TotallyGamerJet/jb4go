@@ -81,13 +81,13 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case astore_0, astore_1, astore_2, astore_3:
 				inst.Dest = localName + strconv.Itoa(int(inst.Op-astore_0))
 				inst.Value, inst.Type = stack.pop()
-				if int(inst.Op-astore_0) > len(params) {
+				if int(inst.Op-astore_0) >= len(params) {
 					var p [4]string
 					copy(p[:], params)
 					params = p[:]
 				}
 				params[int(inst.Op-astore_0)] = inst.Type
-			case istore:
+			case istore, dstore:
 				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
 				inst.Value, inst.Type = stack.pop()
 			case istore_0, istore_1, istore_2, istore_3:
@@ -137,6 +137,13 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = t
 				inst.Dest = v
 				inst.Value = s
+			case i2d:
+				v := nextVar()
+				s, _ := stack.pop()
+				inst.Type = doubleJ
+				inst.Dest = v
+				inst.Args = []string{s}
+				stack.push(v, inst.Type)
 			case irem, iadd:
 				v := nextVar()
 				i2, _ := stack.pop()
