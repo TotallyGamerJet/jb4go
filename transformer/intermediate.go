@@ -30,6 +30,7 @@ func (s *stack) pop() (string, string) {
 }
 
 const (
+	doubleJ = "double"
 	intJ    = "int"
 	objRefJ = "ObjRef"
 )
@@ -58,6 +59,18 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = intJ
 				inst.Dest = v
 				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				stack.push(v, inst.Type)
+			case dload:
+				v := nextVar()
+				inst.Type = doubleJ
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				stack.push(v, inst.Type)
+			case dload_0, dload_1, dload_2, dload_3:
+				v := nextVar()
+				inst.Type = doubleJ
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.Op-dload_0))
 				stack.push(v, inst.Type)
 			case iload_0, iload_1, iload_2, iload_3:
 				v := nextVar()
@@ -124,7 +137,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = t
 				inst.Dest = v
 				inst.Value = s
-			case irem:
+			case irem, iadd:
 				v := nextVar()
 				i2, _ := stack.pop()
 				i1, _ := stack.pop()
@@ -132,12 +145,16 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Args = []string{i1, i2}
 				stack.push(v, inst.Type)
+			case dmul, ddiv, dadd:
+				v := nextVar()
+				i2, _ := stack.pop()
+				i1, _ := stack.pop()
+				inst.Type = doubleJ
+				inst.Dest = v
+				inst.Args = []string{i1, i2}
+				stack.push(v, inst.Type)
 			case return_:
-			case ireturn:
-				var p string
-				p, inst.Type = stack.pop()
-				inst.Args = []string{p}
-			case areturn:
+			case ireturn, dreturn, areturn:
 				var p string
 				p, inst.Type = stack.pop()
 				inst.Args = []string{p}
@@ -148,6 +165,11 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = getJavaType(inst.Type) // cleans up the type if has L...;
 				inst.Dest = v
 				inst.Args = []string{n, f}
+				stack.push(v, inst.Type)
+			case ldc2_w:
+				v := nextVar()
+				inst.Value, inst.Type = class.GetConstant(inst.index())
+				inst.Dest = v
 				stack.push(v, inst.Type)
 			case ldc:
 				v := nextVar()

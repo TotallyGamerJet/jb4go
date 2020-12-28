@@ -33,7 +33,7 @@ type CPInfo interface {
 	Tag() cpTag
 }
 
-func ReadCPInfo(p *Parser) (info CPInfo) {
+func ReadCPInfo(p *Parser) (info CPInfo, wide bool) {
 	tag := p.ReadU1()
 	switch cpTag(tag) {
 	case tagUtf8:
@@ -46,7 +46,12 @@ func ReadCPInfo(p *Parser) (info CPInfo) {
 	//case tagInteger:
 	//case tagFloat:
 	//case tagLong:
-	//case tagDouble:
+	case tagDouble:
+		wide = true // takes up two spots
+		info = doubleInfo{
+			high: p.ReadU4(),
+			low:  p.ReadU4(),
+		}
 	case tagClass:
 		info = classInfo{
 			nameIndex: p.ReadU2(),
@@ -85,7 +90,7 @@ func ReadCPInfo(p *Parser) (info CPInfo) {
 	default:
 		panic(fmt.Sprintf("unknown constant pool tag: %d", tag))
 	}
-	return info
+	return info, wide
 }
 
 type methodRefInfo struct {
@@ -155,6 +160,15 @@ type methodHandleInfo struct {
 
 func (i methodHandleInfo) Tag() cpTag {
 	return tagMethodHandle
+}
+
+type doubleInfo struct {
+	high uint32
+	low  uint32
+}
+
+func (i doubleInfo) Tag() cpTag {
+	return tagDouble
 }
 
 // converts from modified utf8 to unicode

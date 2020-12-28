@@ -2,6 +2,9 @@ package parser
 
 import (
 	"errors"
+	"fmt"
+	"math"
+	"strconv"
 )
 
 // Holds the raw information to a java bytecode class
@@ -31,8 +34,13 @@ func ReadClass(p *Parser) (RawClass, error) {
 	}
 	constantPoolCount := p.ReadU2()
 	c.constantPool = make([]CPInfo, constantPoolCount-1)
+	var wide bool
 	for i := range c.constantPool {
-		c.constantPool[i] = ReadCPInfo(p)
+		if wide { // skip over 8-byte constants
+			wide = false
+			continue
+		}
+		c.constantPool[i], wide = ReadCPInfo(p)
 	}
 	c.accessFlags = p.ReadU2()
 	c.thisClass = p.ReadU2()
@@ -124,7 +132,11 @@ func (c *RawClass) GetConstant(index int) (string, string) {
 	switch info := c.GetCP(index); v := info.(type) {
 	case stringInfo:
 		return "`" + c.GetUtf8(v.stringIndex) + "`", "java/lang/String"
+	case doubleInfo:
+		bits := (int64(v.high) << 32) + int64(v.low)
+		var double = math.Float64frombits(uint64(bits))
+		return strconv.FormatFloat(double, 'E', -1, 64), "double"
 	default:
-		panic("unknown constant")
+		panic(fmt.Sprintf("unknown constant: %d", v.Tag()))
 	}
 }

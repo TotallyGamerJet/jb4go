@@ -70,6 +70,9 @@ func Translate(class JClass) (g GoFile, err error) {
 			}
 			t := getGoType(v2)
 			m.Params = append(m.Params, [3]string{nextArg(), t})
+			if t == "float64" { // doubles and longs take up two argument slots
+				_ = nextArg()
+			}
 		}
 		m.Code = translateCode(v.Code)
 		g.Methods = append(g.Methods, m)
@@ -150,7 +153,7 @@ func translateCode(blocks []basicBlock) string {
 				switch inst.Op {
 				case getstatic:
 					b.WriteString(fmt.Sprintf("%s_%s", ValidateName(inst.Args[0]), inst.Args[1]))
-				case return_, areturn, ireturn:
+				case return_, areturn, ireturn, dreturn:
 					b.WriteString("return ")
 					if len(inst.Args) > 0 {
 						b.WriteString(inst.Args[0])
@@ -165,6 +168,12 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("new(%s)", ValidateName(inst.Args[0])))
 				case irem:
 					b.WriteString(fmt.Sprintf("%s %% %s", inst.Args[0], inst.Args[1]))
+				case iadd, dadd:
+					b.WriteString(fmt.Sprintf("%s + %s", inst.Args[0], inst.Args[1]))
+				case dmul:
+					b.WriteString(fmt.Sprintf("%s * %s", inst.Args[0], inst.Args[1]))
+				case ddiv:
+					b.WriteString(fmt.Sprintf("%s / %s", inst.Args[0], inst.Args[1]))
 				default:
 					b.WriteString("#####" + inst.String())
 				}

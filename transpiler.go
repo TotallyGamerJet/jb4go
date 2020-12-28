@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/totallygamerjet/jb4go/gen"
 	"github.com/totallygamerjet/jb4go/parser"
 	"github.com/totallygamerjet/jb4go/transformer"
@@ -10,29 +11,36 @@ import (
 )
 
 func main() {
-	f, err := os.Open("./examples/Employee.class") //TODO: handle .jar files
-	if err != nil {
+	if err := run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func run() error {
+	f, err := os.Open("./examples/Area.class") //TODO: handle .jar files
+	if err != nil {
+		return err
 	}
 	raw, err := parser.Parse(f)
 	if err != nil {
-		log.Fatal("Couldn't parse java file: ", err)
+		return errors.Wrap(err, "Couldn't parse java file: ")
 	}
 	class, err := transformer.Simplify(raw)
 	if err != nil {
-		log.Fatal("Couldn't simplify raw class: ", err)
+		return errors.Wrap(err, "Couldn't simplify raw class: ")
 	}
 	gFile, err := transformer.Translate(class)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(gFile)
 	o, err := os.OpenFile(gFile.FileName, os.O_CREATE, 0755)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	err = gen.Generate(gFile, o)
 	if err != nil {
-		log.Fatal("Failed to generate: ", err)
+		return errors.Wrap(err, "Failed to generate: ")
 	}
+	return nil
 }
