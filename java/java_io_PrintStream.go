@@ -18,6 +18,10 @@ func (arg0 *java_io_PrintStream) println_G_V(arg1 *java_lang_String) {
 	arg0.print_G_V(New_string_G("\n"))
 }
 
+func (arg0 *java_io_PrintStream) println__V() {
+	fmt.Println()
+}
+
 func (this *java_io_PrintStream) _write_String_void(s *java_lang_String) {
 	for i := int32(0); i < s.length__I(); i++ {
 		fmt.Print(string(rune(s.charAt_I_C(i))))

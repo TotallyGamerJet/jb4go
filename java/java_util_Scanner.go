@@ -15,7 +15,7 @@ func (arg0 *java_util_Scanner) init_java_io_InputStream_V(arg1 *java_io_InputStr
 }
 
 func (arg0 *java_util_Scanner) nextInt__I() int32 {
-	l, _, err := arg0.r.ReadLine()
+	l, _, err := arg0.r.ReadLine() //TODO: leave new line on the stream
 	if err != nil {
 		panic(err)
 	}
@@ -24,4 +24,12 @@ func (arg0 *java_util_Scanner) nextInt__I() int32 {
 		panic(err)
 	}
 	return int32(i)
+}
+
+func (arg0 *java_util_Scanner) nextLine__G() *java_lang_String {
+	l, _, err := arg0.r.ReadLine() //TODO: leave new line on the stream
+	if err != nil {
+		panic(err)
+	}
+	return New_string_G(string(l))
 }

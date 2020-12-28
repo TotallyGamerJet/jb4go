@@ -54,6 +54,12 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Value = localName + strconv.Itoa(int(inst.Op-aload_0))
 				stack.push(v, inst.Type)
+			case aload:
+				v := nextVar()
+				inst.Type = params[inst.operands[0]]
+				inst.Dest = v
+				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				stack.push(v, inst.Type)
 			case iload:
 				v := nextVar()
 				inst.Type = intJ
@@ -87,9 +93,15 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 					params = p[:]
 				}
 				params[int(inst.Op-astore_0)] = inst.Type
-			case istore, dstore:
+			case istore, dstore, astore:
 				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
 				inst.Value, inst.Type = stack.pop()
+				if int(inst.operands[0]) >= len(params) {
+					var p = make([]string, int(inst.operands[0])+1)
+					copy(p[:], params)
+					params = p[:]
+				}
+				params[int(inst.operands[0])] = inst.Type
 			case istore_0, istore_1, istore_2, istore_3:
 				inst.Dest = localName + strconv.Itoa(int(inst.Op-istore_0))
 				inst.Value, inst.Type = stack.pop()
@@ -207,14 +219,27 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Value = ref + "." + f
 				stack.push(v, inst.Type)
-			case ifge:
+			case pop:
+				ref, _ := stack.pop()
+				inst.Dest = "_"
+				inst.Args = []string{ref}
+			case bipush:
+				v := nextVar()
+				inst.Dest = v
+				inst.Value = strconv.Itoa(int(inst.operands[0]))
+				inst.Type = intJ
+				stack.push(v, inst.Type)
+			case ifge, ifne:
 				v, _ := stack.pop()
 				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
-			case ifne:
-				v, _ := stack.pop()
-				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
+			case if_icmpge:
+				v2, _ := stack.pop()
+				v1, _ := stack.pop()
+				inst.Args = []string{v1, v2, strconv.Itoa(inst.index() + inst.Loc)}
 			case goto_:
 				inst.Args = []string{strconv.Itoa(inst.index() + inst.Loc)}
+			case iinc:
+				inst.Args = []string{localName + strconv.Itoa(int(inst.operands[0])), strconv.Itoa(int(inst.operands[1]))}
 			default:
 				panic("unknown Op: " + inst.Op.String())
 			}

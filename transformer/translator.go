@@ -89,10 +89,10 @@ func Translate(class JClass) (g GoFile, err error) {
 func getMain(name string, paramsN int) string {
 	if paramsN > 0 {
 		return `args := make([]*java_lang_String, len(os.Args))
-for i, v := range os.Args {
-	args[i] = New_string_G(v)
-}
-` + name + `(args)
+	for i, v := range os.Args {
+		args[i] = New_string_G(v)
+	}
+	` + name + `(args)
 `
 	}
 	return name + "()\n"
@@ -118,6 +118,7 @@ func translateMethodName(mName, sName, Return string, isStatic, _ bool, params [
 
 // translateCode takes instructions in basic blocks and converts them to valid Go and returns it as a string
 func translateCode(blocks []basicBlock) string {
+	exists := make(map[string]bool)
 	vars := strings.Builder{} // stores all the variables at the top of the function
 	b := strings.Builder{}    // code goes in here
 	for _, block := range blocks {
@@ -134,8 +135,9 @@ func translateCode(blocks []basicBlock) string {
 				if inst.Type != "" {
 					t = getGoType(inst.Type)
 				}
-				if !strings.Contains(inst.Dest, ".") { // ignore fields in the var list
+				if _, ok := exists[inst.Dest]; !strings.Contains(inst.Dest, ".") && !ok { // ignore fields in the var list
 					vars.WriteString(fmt.Sprintf("var %s %s\n", inst.Dest, t))
+					exists[inst.Dest] = true
 				}
 				b.WriteString(fmt.Sprintf("%s = ", inst.Dest))
 			}
@@ -170,6 +172,8 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("if %s >= 0 { goto label%s }", inst.Args[0], inst.Args[1]))
 				case ifne:
 					b.WriteString(fmt.Sprintf("if %s != 0 { goto label%s }", inst.Args[0], inst.Args[1]))
+				case if_icmpge:
+					b.WriteString(fmt.Sprintf("if %s >= %s { goto label%s }", inst.Args[0], inst.Args[1], inst.Args[2]))
 				case goto_:
 					b.WriteString(fmt.Sprintf("goto label%s", inst.Args[0]))
 				case new_:
@@ -186,6 +190,10 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("%s / %s", inst.Args[0], inst.Args[1]))
 				case i2d:
 					b.WriteString(fmt.Sprintf("float64(%s)", inst.Args[0]))
+				case iinc:
+					b.WriteString(fmt.Sprintf("%s += %s", strings.ReplaceAll(inst.Args[0], localName, "arg"), inst.Args[1]))
+				case pop:
+					b.WriteString(fmt.Sprintf("_ = %s", inst.Args[0]))
 				default:
 					panic(inst.String())
 				}
