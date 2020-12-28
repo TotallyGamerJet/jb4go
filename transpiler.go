@@ -17,7 +17,7 @@ func main() {
 }
 
 func run() error {
-	f, err := os.Open("./examples/AverageNums.class") //TODO: handle .jar files
+	f, err := os.Open(os.Args[1]) //TODO: handle .jar files
 	if err != nil {
 		return err
 	}

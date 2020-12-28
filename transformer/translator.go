@@ -178,6 +178,8 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("%s %% %s", inst.Args[0], inst.Args[1]))
 				case iadd, dadd:
 					b.WriteString(fmt.Sprintf("%s + %s", inst.Args[0], inst.Args[1]))
+				case isub:
+					b.WriteString(fmt.Sprintf("%s - %s", inst.Args[0], inst.Args[1]))
 				case dmul:
 					b.WriteString(fmt.Sprintf("%s * %s", inst.Args[0], inst.Args[1]))
 				case ddiv:

@@ -144,7 +144,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Args = []string{s}
 				stack.push(v, inst.Type)
-			case irem, iadd:
+			case irem, iadd, isub:
 				v := nextVar()
 				i2, _ := stack.pop()
 				i1, _ := stack.pop()
@@ -187,6 +187,12 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				}
 				inst.Dest = v
 				stack.push(v, inst.Type)
+			case iconst_m1, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5:
+				v := nextVar()
+				inst.Dest = v
+				inst.Value = strconv.Itoa(int(inst.Op - iconst_0))
+				inst.Type = intJ
+				stack.push(v, inst.Type)
 			case putfield:
 				inst.Value, _ = stack.pop()
 				ref, _ := stack.pop()
@@ -197,7 +203,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				v := nextVar()
 				ref, _ := stack.pop()
 				_, f, t := class.GetFieldRef(inst.index())
-				inst.Type = t
+				inst.Type = getJavaType(t) // confirm that is a java type
 				inst.Dest = v
 				inst.Value = ref + "." + f
 				stack.push(v, inst.Type)

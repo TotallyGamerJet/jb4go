@@ -43,7 +43,7 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 	for i, f := range raw.Fields {
 		var field JField
 		field.Name = f.GetName(raw)
-		field.Type = f.GetType(raw)
+		field.Type = getJavaType(f.GetType(raw))
 		field.IsPublic = f.IsPublic()
 		field.IsStatic = f.IsStatic()
 		c.Fields[i] = field
