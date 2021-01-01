@@ -104,7 +104,10 @@ func getGoType(jType string) string {
 	case "boolean":
 		return "bool"
 	default:
-		return "*" + ValidateName(jType) // is this right?
+		if jType[0] == '[' { // ignore arrays
+			return jType
+		}
+		return "*java_lang_Object" //"*" + ValidateName(jType) // is this right?
 	}
 }
 
@@ -142,50 +145,63 @@ func getJavaType(str string) string {
 	}
 }
 
-func translateParams(str string) (params []string, ret string) {
+type nameAndType struct {
+	type_   string
+	isArray bool
+}
+
+func translateParams(str string) (params []nameAndType, ret string) {
 	var isName = false // true if reading in class isName
 	var temp string
+	var isArray = false
 	for _, v := range str {
 		if isName {
 			if v != ';' {
 				temp += string(v)
 			} else {
 				// end of class name
-				params = append(params, temp)
+				params = append(params, struct {
+					type_   string
+					isArray bool
+				}{type_: temp, isArray: isArray})
 				temp = ""
 				isName = false
 			}
 			continue
 		}
 		switch v {
-		case '(', ')': // ignore
+		case '(', ')':
+			continue
 		case 'B':
-			params = append(params, "byte")
+			temp += "byte"
 		case 'C':
-			params = append(params, "char")
+			temp += "char"
 		case 'D':
-			params = append(params, "double")
+			temp += "double"
 		case 'F':
-			params = append(params, "float")
+			temp += "float"
 		case 'I':
-			params = append(params, "int")
+			temp += "int"
 		case 'J':
-			params = append(params, "long")
+			temp += "long"
 		case 'L':
 			isName = true
-			//temp = "L"
+			continue
 		case 'S':
-			params = append(params, "short")
+			temp += "short"
 		case 'Z':
-			params = append(params, "boolean")
+			temp += "boolean"
 		case 'V':
-			params = append(params, "void")
+			temp += "void"
 		case '[':
-			params = append(params, "[")
+			isArray = true
+			continue //get the type of this array
 		}
+		params = append(params, nameAndType{type_: temp, isArray: isArray})
+		temp = ""
 	}
 	if len(params) > 0 {
-		ret = params[len(params)-1]
+		ret = params[len(params)-1].type_
 		params = params[:len(params)-1]
 	}
 	return params, ret

@@ -93,6 +93,11 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 					params = p[:]
 				}
 				params[int(inst.Op-astore_0)] = inst.Type
+			case aastore:
+				val, _ := stack.pop()
+				index, _ := stack.pop()
+				ref, _ := stack.pop()
+				inst.Args = []string{ref, index, val}
 			case istore, dstore, astore:
 				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
 				inst.Value, inst.Type = stack.pop()
@@ -105,6 +110,9 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case istore_0, istore_1, istore_2, istore_3:
 				inst.Dest = localName + strconv.Itoa(int(inst.Op-istore_0))
 				inst.Value, inst.Type = stack.pop()
+			case dstore_0, dstore_1, dstore_2, dstore_3:
+				inst.Dest = localName + strconv.Itoa(int(inst.Op-dstore_0))
+				inst.Value, inst.Type = stack.pop()
 			case invokespecial, invokevirtual, invokestatic:
 				c, n, t := class.GetMethodRef(inst.index())
 				p, _ := translateParams(t)
@@ -116,7 +124,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				if inst.Op != invokestatic {
 					r, t := stack.pop()                     // the receiver
 					if inst.Op == invokespecial && c != t { // invokespecial calls inits so add the super class
-						r += "." + ValidateName(c)
+						r += ".super" // + ValidateName(c)
 					}
 					inst.HasReceiver = true
 					inst.Args = append([]string{r}, params...) // start with receiver
@@ -156,7 +164,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Args = []string{s}
 				stack.push(v, inst.Type)
-			case irem, iadd, isub:
+			case irem, iadd, isub, imul:
 				v := nextVar()
 				i2, _ := stack.pop()
 				i1, _ := stack.pop()
@@ -195,7 +203,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Value, inst.Type = class.GetConstant(int(inst.operands[0]))
 				switch inst.Type { // do any necessary conversions for this constant
 				case "java/lang/String":
-					inst.Value = fmt.Sprintf("New_string_G(%s)", inst.Value)
+					inst.Value = fmt.Sprintf("newString(%s)", inst.Value)
 				}
 				inst.Dest = v
 				stack.push(v, inst.Type)
@@ -205,19 +213,25 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Value = strconv.Itoa(int(inst.Op - iconst_0))
 				inst.Type = intJ
 				stack.push(v, inst.Type)
+			case dconst_0, dconst_1:
+				v := nextVar()
+				inst.Dest = v
+				inst.Value = strconv.Itoa(int(inst.Op - dconst_0))
+				inst.Type = doubleJ
+				stack.push(v, inst.Type)
 			case putfield:
-				inst.Value, _ = stack.pop()
+				v, _ := stack.pop()
 				ref, _ := stack.pop()
 				_, f, t := class.GetFieldRef(inst.index())
 				inst.Type = t
-				inst.Dest = ref + "." + f
+				inst.Args = []string{ref, f, v}
 			case getfield:
 				v := nextVar()
 				ref, _ := stack.pop()
 				_, f, t := class.GetFieldRef(inst.index())
 				inst.Type = getJavaType(t) // confirm that is a java type
 				inst.Dest = v
-				inst.Value = ref + "." + f
+				inst.Args = []string{ref, f}
 				stack.push(v, inst.Type)
 			case pop:
 				ref, _ := stack.pop()
@@ -229,13 +243,29 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Value = strconv.Itoa(int(inst.operands[0]))
 				inst.Type = intJ
 				stack.push(v, inst.Type)
-			case ifge, ifne:
+			case ifge, ifne, ifgt, ifle:
 				v, _ := stack.pop()
 				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
+			case dcmpg:
+				v := nextVar()
+				a2, _ := stack.pop()
+				a1, _ := stack.pop()
+				inst.Dest = v
+				inst.Type = intJ
+				inst.Args = []string{a1, a2}
+				stack.push(v, inst.Type)
 			case if_icmpge:
 				v2, _ := stack.pop()
 				v1, _ := stack.pop()
 				inst.Args = []string{v1, v2, strconv.Itoa(inst.index() + inst.Loc)}
+			case anewarray:
+				v := nextVar()
+				size, _ := stack.pop()
+				c := class.GetClass(inst.index())
+				inst.Dest = v
+				inst.Type = "[]" + getGoType(c)
+				inst.Args = []string{size, c}
+				stack.push(v, inst.Type)
 			case goto_:
 				inst.Args = []string{strconv.Itoa(inst.index() + inst.Loc)}
 			case iinc:
@@ -244,7 +274,6 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				panic("unknown Op: " + inst.Op.String())
 			}
 			block[i] = inst // update the instruction
-			//fmt.Println(inst)
 		}
 	}
 	if len(stack) != 0 { // sanity check to make sure nothing went wrong

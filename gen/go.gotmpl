@@ -1,5 +1,12 @@
 package {{ .Package }}
 
+{{if gt (len .Imports) 0 -}}
+import (
+	{{- range .Imports}}
+	"{{ . }}"
+	{{- end}}
+)
+{{- end}}
 {{- if gt (len .Globals)  0 -}}
 var (
     {{- range $i, $e := .Globals -}}
@@ -8,14 +15,31 @@ var (
 )
 {{- end}}
 {{ $s := .Struct }}
-type {{ $s.Name }} struct {
-    {{ $s.Embed}}
-    {{- range $s.Fields}}
-    {{index . 0}} {{index . 1}}
-    {{- end }}
+func new_{{ $s.Name }}() *java_lang_Object {
+	type fields struct {
+        {{- range $s.Fields}}
+        {{index . 0}} {{index . 1}}
+        {{- end }}
+    }
+    return &java_lang_Object{
+    	name: "{{$s.Name}}",
+    	super: new_{{$s.Embed}}(),
+    	fields: &fields{},
+    	methods: map[string]interface{}{
+    		{{- range .Methods}}
+    		{{- if .Receiver }}
+    		"{{.Name}}": func({{.Receiver}}, {{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+    		    {{ .Code -}}
+            },
+    		{{- end }}
+    		{{- end }}
+        },
+    }
 }
 {{ range .Methods }}
-func {{ if .Receiver}}({{ .Receiver }}) {{end}}{{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+{{- if not .Receiver}}
+func {{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
 	{{.Code -}}
 }
+{{- end}}
 {{end}}

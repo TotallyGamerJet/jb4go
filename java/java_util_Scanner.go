@@ -1,35 +1,52 @@
-package java
+package main
 
 import (
 	"bufio"
+	"io"
 	"strconv"
 )
 
-type java_util_Scanner struct {
-	*java_lang_Object
-	r *bufio.Reader
-}
-
-func (arg0 *java_util_Scanner) init_java_io_InputStream_V(arg1 *java_io_InputStream) {
-	arg0.r = bufio.NewReader(arg1.input)
-}
-
-func (arg0 *java_util_Scanner) nextInt__I() int32 {
-	l, _, err := arg0.r.ReadLine() //TODO: leave new line on the stream
-	if err != nil {
-		panic(err)
+func new_java_util_Scanner() *java_lang_Object {
+	type fields struct {
+		E_r *bufio.Reader
 	}
-	i, err := strconv.Atoi(string(l))
-	if err != nil {
-		panic(err)
+	return &java_lang_Object{
+		name:   "java_util_Scanner",
+		super:  new_java_lang_Object(),
+		fields: &fields{},
+		methods: map[string]interface{}{
+			"init_java_io_InputStream_V": func(arg0 *java_lang_Object, arg1 *java_lang_Object) {
+				arg0.setField("E_r", bufio.NewReader(arg1.getField("E_input").(io.Reader)))
+			},
+			"nextInt__I": func(arg0 *java_lang_Object) int32 {
+				l, _, err := arg0.getField("E_r").(*bufio.Reader).ReadLine() //TODO: leave new line on the stream
+				if err != nil {
+					panic(err)
+				}
+				i, err := strconv.Atoi(string(l))
+				if err != nil {
+					panic(err)
+				}
+				return int32(i)
+			},
+			"nextLine__G": func(arg0 *java_lang_Object) *java_lang_Object {
+				l, _, err := arg0.getField("E_r").(*bufio.Reader).ReadLine() //TODO: leave new line on the stream
+				if err != nil {
+					panic(err)
+				}
+				return newString(string(l))
+			},
+			"nextDouble__D": func(arg0 *java_lang_Object) float64 {
+				l, _, err := arg0.getField("E_r").(*bufio.Reader).ReadLine()
+				if err != nil {
+					panic(err)
+				}
+				f, err := strconv.ParseFloat(string(l), 64)
+				if err != nil {
+					panic(err)
+				}
+				return f
+			},
+		},
 	}
-	return int32(i)
-}
-
-func (arg0 *java_util_Scanner) nextLine__G() *java_lang_String {
-	l, _, err := arg0.r.ReadLine() //TODO: leave new line on the stream
-	if err != nil {
-		panic(err)
-	}
-	return New_string_G(string(l))
 }

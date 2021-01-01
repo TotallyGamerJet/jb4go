@@ -1,4 +1,4 @@
-package java
+package main
 
 /* TYPES:
 JAVA : GO

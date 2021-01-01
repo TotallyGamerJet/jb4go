@@ -1,17 +1,26 @@
-package java
+package main
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
-type java_text_DecimalFormat struct {
-	*java_lang_Object
-	format string
-}
-
-func (arg0 java_text_DecimalFormat) init_G_V(arg1 *java_lang_String) {
-	arg0.format = arg1.String()
-}
-
-func (arg0 java_text_DecimalFormat) format_D_G(arg1 float64) *java_lang_String {
-	//TODO: actually handle the formatting properly
-	return New_string_G(strconv.FormatFloat(arg1, 'f', 1, 64))
+func new_java_text_DecimalFormat() *java_lang_Object {
+	type fields struct {
+		E_format string
+	}
+	return &java_lang_Object{
+		name:   "java_text_DecimalFormat",
+		super:  new_java_lang_Object(), //TODO: correct the super class
+		fields: &fields{},
+		methods: map[string]interface{}{
+			"init_G_V": func(arg0, arg1 *java_lang_Object) {
+				arg0.setField("E_format", arg1.callMethod("String").(string))
+			},
+			"format_D_G": func(arg0 *java_lang_Object, arg1 float64) *java_lang_Object {
+				format := arg0.getField("E_format").(string) //TODO: implement proper formatting
+				return newString(strconv.FormatFloat(arg1, 'f', len(format[strings.Index(format, ".")+1:]), 64))
+			},
+		},
+	}
 }

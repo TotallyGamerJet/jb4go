@@ -24,14 +24,14 @@ type JField struct {
 }
 
 type JMethod struct {
-	Name      string       `json:"name"`
-	IsPublic  bool         `json:"public"`
-	IsStatic  bool         `json:"static"`
-	Params    []string     `json:"params"`
-	Code      []basicBlock `json:"code"`
-	MaxStack  int          `json:"maxStack"`
-	MaxLocals int          `json:"maxLocals"`
-	Return    string       `json:"return"`
+	Name      string        `json:"name"`
+	IsPublic  bool          `json:"public"`
+	IsStatic  bool          `json:"static"`
+	Params    []nameAndType `json:"params"`
+	Code      []basicBlock  `json:"code"`
+	MaxStack  int           `json:"maxStack"`
+	MaxLocals int           `json:"maxLocals"`
+	Return    string        `json:"return"`
 }
 
 func Simplify(raw parser.RawClass) (c JClass, err error) {
@@ -60,7 +60,9 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		instrs := readInstructions(code)
 		blocks := createBasicBlocks(instrs)
 		var params = make([]string, len(m.Params))
-		copy(params, m.Params)
+		for i, v := range m.Params {
+			params[i] = v.type_
+		}
 		if !m.IsStatic {
 			params = append([]string{ValidateName(c.Name)}, params...)
 		}

@@ -55,17 +55,23 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 	// if a line number is in this slice it means that it is the first instruction of a block
 	// added 0 because a block starts at the beginning
 	var startOfBlock = []int{0}
+	var exists = make(map[int]bool)
 	for _, v := range instrs {
 		if isTerminator(v) {
 			var next = v.Loc + len(v.operands) + 1
-			if startOfBlock[len(startOfBlock)-1] != next { // avoid duplicates by checking if the last one eqls this one
+			if _, ok := exists[next]; !ok { // avoid duplicates by checking if it already exists
 				startOfBlock = append(startOfBlock, next) // the next instruction is the beginning of a block
+				exists[next] = true
 			}
 			// ignore the operands
 			if hasBranch(v) {
 				// if this instruction branches to some location add it to the list
 				// because it is the beginning of a new_ basic block
-				startOfBlock = append(startOfBlock, v.Loc+getBrOffset(v)) // add the offset to the current instruction Loc to get next block start
+				br := v.Loc + getBrOffset(v)
+				if _, ok := exists[br]; !ok {
+					startOfBlock = append(startOfBlock, br) // add the offset to the current instruction Loc to get next block start
+					exists[br] = true
+				}
 			}
 		}
 	}
