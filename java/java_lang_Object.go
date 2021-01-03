@@ -25,12 +25,12 @@ func new_java_lang_Object() *java_lang_Object {
 	}
 }
 
-// getFieldDouble is a convenience method for casting the result from getField to *java_lang_Object
+// getFieldDouble is a convenience method for casting the result from getField to float64
 func (arg0 *java_lang_Object) getFieldDouble(field string) float64 {
 	return arg0.getField(field).(float64)
 }
 
-// getFieldInt is a convenience method for casting the result from getField to *java_lang_Object
+// getFieldInt is a convenience method for casting the result from getField to int32
 func (arg0 *java_lang_Object) getFieldInt(field string) int32 {
 	return arg0.getField(field).(int32)
 }

@@ -1,33 +1,46 @@
 package transformer
 
 import (
+	"fmt"
 	"github.com/dave/jennifer/jen"
 	"strings"
+)
+
+const (
+	booleanJ = "boolean"
+	doubleJ  = "double"
+	floatJ   = "float"
+	charJ    = "char"
+	byteJ    = "byte"
+	shortJ   = "short"
+	intJ     = "int"
+	longJ    = "long"
+	voidJ    = "void"
 )
 
 // TranslateIdent takes a java type and converts it to a single character
 // identifier or if its an Object name it converts it to a valid Go name.
 func TranslateIdent(str string) string {
 	switch str {
-	case "byte":
+	case byteJ:
 		return "B"
-	case "char":
+	case charJ:
 		return "C"
-	case "double":
+	case doubleJ:
 		return "D"
-	case "float":
+	case floatJ:
 		return "F"
-	case "int":
+	case intJ:
 		return "I"
-	case "long":
+	case longJ:
 		return "J"
-	case "short":
+	case shortJ:
 		return "S"
-	case "boolean":
+	case booleanJ:
 		return "Z"
 	case "[":
 		return "R"
-	case "void":
+	case voidJ:
 		return "V"
 	case "java/lang/String":
 		return "G"
@@ -39,25 +52,25 @@ func TranslateIdent(str string) string {
 // toGoType takes a java type as a string and add to the file the proper go type
 func toGoType(javaType string, f *jen.Statement) {
 	switch javaType {
-	case "byte":
+	case byteJ:
 		f.Int8()
-	case "char":
+	case charJ:
 		f.Uint16()
-	case "double":
+	case doubleJ:
 		f.Float64()
-	case "float":
+	case floatJ:
 		f.Float32()
-	case "int":
+	case intJ:
 		f.Int32()
-	case "long":
+	case longJ:
 		f.Int64()
-	case "short":
+	case shortJ:
 		f.Int16()
-	case "boolean":
+	case booleanJ:
 		f.Bool()
 	case "[":
 		panic("not implemented")
-	case "void": // do nothing
+	case voidJ: // do nothing
 	default:
 		if strings.HasPrefix(javaType, "L") {
 			name := ValidateName(strings.ReplaceAll(javaType[1:], "/", "_"))
@@ -87,21 +100,21 @@ func ValidateName(name string) string {
 
 func getGoType(jType string) string {
 	switch jType {
-	case "char":
-		return "uint16"
-	case "short":
+	case charJ:
+		return "int32" //jvm doesn't distinguish between char and ints "uint16"
+	case shortJ:
 		return "int16"
-	case "byte":
+	case byteJ:
 		return "int8"
-	case "int":
+	case intJ:
 		return "int32"
-	case "long":
+	case longJ:
 		return "int64"
-	case "float":
+	case floatJ:
 		return "float32"
-	case "double":
+	case doubleJ:
 		return "float64"
-	case "boolean":
+	case booleanJ:
 		return "bool"
 	default:
 		if jType[0] == '[' { // ignore arrays
@@ -115,22 +128,22 @@ func getGoType(jType string) string {
 func getJavaType(str string) string {
 	switch str {
 	case "B":
-		return "byte"
+		return byteJ
 	case "C":
-		return "char"
+		return charJ
 	case "D":
-		return "double"
+		return doubleJ
 	case "F":
-		return "float"
+		return floatJ
 	case "I":
-		return "int"
+		return intJ
 	case "J":
-		return "long"
+		return longJ
 	case "S":
-		return "short"
+		return shortJ
 	case "Z":
-		return "boolean"
-	case "void":
+		return booleanJ
+	case voidJ:
 		return ""
 	default:
 		var out string
@@ -160,10 +173,7 @@ func translateParams(str string) (params []nameAndType, ret string) {
 				temp += string(v)
 			} else {
 				// end of class name
-				params = append(params, struct {
-					type_   string
-					isArray bool
-				}{type_: temp, isArray: isArray})
+				params = append(params, nameAndType{type_: temp, isArray: isArray})
 				temp = ""
 				isName = false
 			}
@@ -173,26 +183,26 @@ func translateParams(str string) (params []nameAndType, ret string) {
 		case '(', ')':
 			continue
 		case 'B':
-			temp += "byte"
+			temp += byteJ
 		case 'C':
-			temp += "char"
+			temp += charJ
 		case 'D':
-			temp += "double"
+			temp += doubleJ
 		case 'F':
-			temp += "float"
+			temp += floatJ
 		case 'I':
-			temp += "int"
+			temp += intJ
 		case 'J':
-			temp += "long"
+			temp += longJ
 		case 'L':
 			isName = true
 			continue
 		case 'S':
-			temp += "short"
+			temp += shortJ
 		case 'Z':
-			temp += "boolean"
+			temp += booleanJ
 		case 'V':
-			temp += "void"
+			temp += voidJ
 		case '[':
 			isArray = true
 			continue //get the type of this array
@@ -205,4 +215,27 @@ func translateParams(str string) (params []nameAndType, ret string) {
 		params = params[:len(params)-1]
 	}
 	return params, ret
+}
+
+func arrayTypeCodes(code int) string {
+	switch code {
+	case 4:
+		return booleanJ
+	case 5:
+		return charJ
+	case 6:
+		return floatJ
+	case 7:
+		return doubleJ
+	case 8:
+		return byteJ
+	case 9:
+		return shortJ
+	case 10:
+		return intJ
+	case 11:
+		return longJ
+	default:
+		panic(fmt.Sprintf("unknown code: %d", code))
+	}
 }

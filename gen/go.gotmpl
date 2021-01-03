@@ -36,7 +36,7 @@ func new_{{ $s.Name }}() *java_lang_Object {
         },
     }
 }
-{{ range .Methods }}
+{{ range .Methods -}}
 {{- if not .Receiver}}
 func {{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
 	{{.Code -}}

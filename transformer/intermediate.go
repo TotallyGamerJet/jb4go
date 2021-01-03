@@ -30,8 +30,6 @@ func (s *stack) pop() (string, string) {
 }
 
 const (
-	doubleJ = "double"
-	intJ    = "int"
 	objRefJ = "ObjRef"
 )
 
@@ -52,40 +50,56 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 					inst.Type = objRefJ //TODO: remove this once all stores will add to params
 				}
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.Op-aload_0))
+				inst.Value = "a" + localName + strconv.Itoa(int(inst.Op-aload_0))
 				stack.push(v, inst.Type)
 			case aload:
 				v := nextVar()
 				inst.Type = params[inst.operands[0]]
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				inst.Value = "a" + localName + strconv.Itoa(int(inst.operands[0]))
 				stack.push(v, inst.Type)
 			case iload:
 				v := nextVar()
 				inst.Type = intJ
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				inst.Value = "i" + localName + strconv.Itoa(int(inst.operands[0]))
 				stack.push(v, inst.Type)
 			case dload:
 				v := nextVar()
 				inst.Type = doubleJ
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.operands[0]))
+				inst.Value = "d" + localName + strconv.Itoa(int(inst.operands[0]))
 				stack.push(v, inst.Type)
 			case dload_0, dload_1, dload_2, dload_3:
 				v := nextVar()
 				inst.Type = doubleJ
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.Op-dload_0))
+				inst.Value = "d" + localName + strconv.Itoa(int(inst.Op-dload_0))
 				stack.push(v, inst.Type)
 			case iload_0, iload_1, iload_2, iload_3:
 				v := nextVar()
 				inst.Type = intJ
 				inst.Dest = v
-				inst.Value = localName + strconv.Itoa(int(inst.Op-iload_0))
+				inst.Value = "i" + localName + strconv.Itoa(int(inst.Op-iload_0))
+				stack.push(v, inst.Type)
+			case aaload:
+				v := nextVar()
+				idx, _ := stack.pop()
+				ref, _ := stack.pop()
+				inst.Dest = v
+				inst.Args = []string{ref, idx}
+				inst.Type = "*java_lang_Object"
+				stack.push(v, inst.Type)
+			case iaload:
+				v := nextVar()
+				idx, _ := stack.pop()
+				ref, _ := stack.pop()
+				inst.Dest = v
+				inst.Args = []string{ref, idx}
+				inst.Type = intJ
 				stack.push(v, inst.Type)
 			case astore_0, astore_1, astore_2, astore_3:
-				inst.Dest = localName + strconv.Itoa(int(inst.Op-astore_0))
+				inst.Dest = "a" + localName + strconv.Itoa(int(inst.Op-astore_0))
 				inst.Value, inst.Type = stack.pop()
 				if int(inst.Op-astore_0) >= len(params) {
 					var p [4]string
@@ -93,13 +107,22 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 					params = p[:]
 				}
 				params[int(inst.Op-astore_0)] = inst.Type
-			case aastore:
+			case aastore, iastore:
 				val, _ := stack.pop()
 				index, _ := stack.pop()
 				ref, _ := stack.pop()
 				inst.Args = []string{ref, index, val}
 			case istore, dstore, astore:
-				inst.Dest = localName + strconv.Itoa(int(inst.operands[0]))
+				var prefix string
+				switch inst.Op {
+				case istore:
+					prefix = "i"
+				case dstore:
+					prefix = "d"
+				case astore:
+					prefix = "a"
+				}
+				inst.Dest = prefix + localName + strconv.Itoa(int(inst.operands[0]))
 				inst.Value, inst.Type = stack.pop()
 				if int(inst.operands[0]) >= len(params) {
 					var p = make([]string, int(inst.operands[0])+1)
@@ -108,10 +131,10 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				}
 				params[int(inst.operands[0])] = inst.Type
 			case istore_0, istore_1, istore_2, istore_3:
-				inst.Dest = localName + strconv.Itoa(int(inst.Op-istore_0))
+				inst.Dest = "i" + localName + strconv.Itoa(int(inst.Op-istore_0))
 				inst.Value, inst.Type = stack.pop()
 			case dstore_0, dstore_1, dstore_2, dstore_3:
-				inst.Dest = localName + strconv.Itoa(int(inst.Op-dstore_0))
+				inst.Dest = "d" + localName + strconv.Itoa(int(inst.Op-dstore_0))
 				inst.Value, inst.Type = stack.pop()
 			case invokespecial, invokevirtual, invokestatic:
 				c, n, t := class.GetMethodRef(inst.index())
@@ -164,7 +187,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Args = []string{s}
 				stack.push(v, inst.Type)
-			case irem, iadd, isub, imul:
+			case irem, iadd, isub, imul, idiv:
 				v := nextVar()
 				i2, _ := stack.pop()
 				i1, _ := stack.pop()
@@ -243,7 +266,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Value = strconv.Itoa(int(inst.operands[0]))
 				inst.Type = intJ
 				stack.push(v, inst.Type)
-			case ifge, ifne, ifgt, ifle:
+			case ifge, ifne, ifgt, ifle, iflt:
 				v, _ := stack.pop()
 				inst.Args = []string{v, strconv.Itoa(inst.index() + inst.Loc)}
 			case dcmpg:
@@ -254,7 +277,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = intJ
 				inst.Args = []string{a1, a2}
 				stack.push(v, inst.Type)
-			case if_icmpge:
+			case if_icmpge, if_icmplt, if_icmpgt:
 				v2, _ := stack.pop()
 				v1, _ := stack.pop()
 				inst.Args = []string{v1, v2, strconv.Itoa(inst.index() + inst.Loc)}
@@ -266,10 +289,26 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = "[]" + getGoType(c)
 				inst.Args = []string{size, c}
 				stack.push(v, inst.Type)
+			case newarray:
+				v := nextVar()
+				size, _ := stack.pop()
+				t := arrayTypeCodes(int(inst.operands[0]))
+				inst.Dest = v
+				inst.Type = "[]" + getGoType(t)
+				inst.Args = []string{size, t}
+				stack.push(v, inst.Type)
+			case arraylength:
+				v := nextVar()
+				ref, _ := stack.pop()
+				inst.Dest = v
+				inst.Type = intJ
+				inst.Args = []string{ref}
+				stack.push(v, inst.Type)
 			case goto_:
 				inst.Args = []string{strconv.Itoa(inst.index() + inst.Loc)}
 			case iinc:
-				inst.Args = []string{localName + strconv.Itoa(int(inst.operands[0])), strconv.Itoa(int(inst.operands[1]))}
+				//TODO: make sure this is always an int and not some other type
+				inst.Args = []string{"i" + localName + strconv.Itoa(int(inst.operands[0])), strconv.Itoa(int(inst.operands[1]))}
 			default:
 				panic("unknown Op: " + inst.Op.String())
 			}

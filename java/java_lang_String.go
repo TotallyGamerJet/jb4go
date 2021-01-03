@@ -21,3 +21,7 @@ func newString(str string) *java_lang_Object {
 	o.setField("E_str", str)
 	return o
 }
+
+func java_lang_String_format_GRjava_lang_Object_G(format *java_lang_Object, objs []*java_lang_Object) *java_lang_Object {
+	return newString("(TODO)")
+}

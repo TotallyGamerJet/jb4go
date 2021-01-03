@@ -19,17 +19,36 @@ func new_java_io_PrintStream() *java_lang_Object {
 				fmt.Println()
 			},
 			"printf_GRjava_lang_Object_java_io_PrintStream": func(arg0, arg1 *java_lang_Object, arg2 []*java_lang_Object) *java_lang_Object {
-				fmt.Println(arg1.callMethod("String").(string))
-				for _, v := range arg2 { //TODO: actually implement
+				format := arg1.callMethod("String").(string)
+				var args = make([]interface{}, len(arg2))
+				for i, v := range arg2 { //TODO: actually implement
 					switch v.name {
 					case "java_lang_String":
-						fmt.Print(v.callMethod("String").(string))
+						args[i] = v.callMethod("String").(string)
+					case "java_lang_Integer":
+						args[i] = v.getFieldInt("E_val")
+					case "java_lang_Double":
+						args[i] = v.getFieldDouble("E_val")
 					default:
-						fmt.Print(v.name, " ")
+						panic(v.name)
 					}
 				}
-				fmt.Println()
+				fmt.Printf(format, args...)
 				return arg0
+			},
+			"println_java_lang_Object_V": func(arg0, arg1 *java_lang_Object) {
+				switch arg1.name {
+				case "java_lang_String":
+					fmt.Println(arg1.callMethod("String").(string))
+				case "java_lang_Integer":
+					fmt.Println(arg1.getFieldInt("E_val"))
+				case "java_lang_Double":
+					fmt.Println(arg1.getFieldDouble("E_val"))
+				case "java_lang_Character":
+					fmt.Println(arg1.getFieldInt("E_val"))
+				default:
+					fmt.Println(arg1.name)
+				}
 			},
 		},
 	}
