@@ -1,18 +1,22 @@
 package main
 
+func fn_java_lang_String() map[string]interface{} {
+	return map[string]interface{}{
+		"String": func(arg0 *java_lang_Object) string {
+			return arg0.getField("E_str").(string)
+		},
+	}
+}
+
 func new_java_lang_String() *java_lang_Object {
 	type fields struct {
 		E_str string
 	}
 	return &java_lang_Object{
-		name:   "java_lang_String",
-		super:  new_java_lang_Object(),
-		fields: &fields{},
-		methods: map[string]interface{}{
-			"String": func(arg0 *java_lang_Object) string {
-				return arg0.getField("E_str").(string)
-			},
-		},
+		name:    "java_lang_String",
+		super:   new_java_lang_Object(),
+		fields:  &fields{},
+		methods: fn_java_lang_String,
 	}
 }
 

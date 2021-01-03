@@ -7,21 +7,25 @@ import (
 )
 
 type java_lang_Object struct {
-	name       string                 // the java name of this class
-	super      *java_lang_Object      // pointer to this object's super class
-	sync.Mutex                        // Used to synchronize
-	fields     interface{}            // pointer to actual fields
-	methods    map[string]interface{} // maps method names to func implementations
+	name       string                        // the java name of this class
+	super      *java_lang_Object             // pointer to this object's super class
+	sync.Mutex                               // Used to synchronize
+	fields     interface{}                   // pointer to actual fields
+	methods    func() map[string]interface{} // maps method names to func implementations
+}
+
+func fn_java_lang_Object() map[string]interface{} {
+	return map[string]interface{}{
+		"init__V": func(arg0 *java_lang_Object) {
+
+		},
+	}
 }
 
 func new_java_lang_Object() *java_lang_Object {
 	return &java_lang_Object{
-		name: "java_lang_Object",
-		methods: map[string]interface{}{
-			"init__V": func(arg0 *java_lang_Object) {
-
-			},
-		},
+		name:    "java_lang_Object",
+		methods: fn_java_lang_Object,
 	}
 }
 
@@ -79,7 +83,7 @@ func (arg0 *java_lang_Object) callMethod(methodName string, params ...interface{
 	for i, v := range params {
 		p[i] = reflect.ValueOf(v)
 	}
-	m, ok := arg0.methods[methodName]
+	m, ok := arg0.methods()[methodName]
 	if !ok {
 		panic(fmt.Sprintf("%s has no method: %s", arg0.name, methodName))
 	}

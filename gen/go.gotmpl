@@ -15,6 +15,18 @@ var (
 )
 {{- end}}
 {{ $s := .Struct }}
+func fn_{{ $s.Name }}() map[string]interface{} {
+	return map[string]interface{}{
+		{{- range .Methods}}
+		{{- if .Receiver }}
+		"{{.Name}}": func({{.Receiver}}, {{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+		{{ .Code -}}
+		},
+		{{- end }}
+		{{- end }}
+	}
+}
+
 func new_{{ $s.Name }}() *java_lang_Object {
 	type fields struct {
         {{- range $s.Fields}}
@@ -25,15 +37,7 @@ func new_{{ $s.Name }}() *java_lang_Object {
     	name: "{{$s.Name}}",
     	super: new_{{$s.Embed}}(),
     	fields: &fields{},
-    	methods: map[string]interface{}{
-    		{{- range .Methods}}
-    		{{- if .Receiver }}
-    		"{{.Name}}": func({{.Receiver}}, {{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
-    		    {{ .Code -}}
-            },
-    		{{- end }}
-    		{{- end }}
-        },
+    	methods: fn_{{ $s.Name }},
     }
 }
 {{ range .Methods -}}

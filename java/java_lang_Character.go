@@ -1,5 +1,9 @@
 package main
 
+func fn_java_lang_Character() map[string]interface{} {
+	return map[string]interface{}{}
+}
+
 func new_java_lang_Character() *java_lang_Object {
 	type fields struct {
 		E_val uint16
@@ -8,7 +12,7 @@ func new_java_lang_Character() *java_lang_Object {
 		name:    "java_lang_Character",
 		super:   new_java_lang_Object(), // TODO: extend from java.lang.Number
 		fields:  &fields{},
-		methods: map[string]interface{}{},
+		methods: fn_java_lang_Character,
 	}
 }
 
