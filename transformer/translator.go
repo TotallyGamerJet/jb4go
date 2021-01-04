@@ -130,7 +130,9 @@ func translateCode(blocks []basicBlock) string {
 	vars := strings.Builder{} // stores all the variables at the top of the function
 	b := strings.Builder{}    // code goes in here
 	for _, block := range blocks {
-		b.WriteString(fmt.Sprintf("label%d:\n", block[0].Loc))
+		if len(blocks) > 1 {
+			b.WriteString(fmt.Sprintf("label%d:\n", block[0].Loc))
+		}
 		for _, inst := range block {
 			if inst.Op == nop { // ignore
 				continue
@@ -240,6 +242,14 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("%s * %s", inst.Args[0], inst.Args[1]))
 				case idiv, ddiv:
 					b.WriteString(fmt.Sprintf("%s / %s", inst.Args[0], inst.Args[1]))
+				case ishl:
+					b.WriteString(fmt.Sprintf("%s << %s", inst.Args[0], inst.Args[1]))
+				case ishr:
+					b.WriteString(fmt.Sprintf("%s >> %s", inst.Args[0], inst.Args[1]))
+				case iand:
+					b.WriteString(fmt.Sprintf("%s & %s", inst.Args[0], inst.Args[1]))
+				case ior:
+					b.WriteString(fmt.Sprintf("%s | %s", inst.Args[0], inst.Args[1]))
 				case i2d:
 					b.WriteString(fmt.Sprintf("float64(%s)", inst.Args[0]))
 				case iinc:
