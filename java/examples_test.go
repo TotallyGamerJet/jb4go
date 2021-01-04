@@ -11,7 +11,24 @@ import (
 	"text/template"
 )
 
+func Test_IntsConst(t *testing.T) {
+	// IntConst.class tests to make sure all the constant opcodes work properly
+	src := transpile("../examples/IntConst.class")
+	v := eval(src, "main.ints_IntConst_Call__I")
+	f, ok := v.(func() int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func() int32 {
+		return -1 + 0 + 1 + 2 + 3 + 4 + 5
+	}
+	if f() != g() {
+		t.Failed()
+	}
+}
+
 func Test_Ints(t *testing.T) {
+	// Ints.class tests to make sure that all the operators on ints function properly
 	src := transpile("../examples/Ints.class")
 	v := eval(src, "main.ints_Ints_Call_I_I")
 	f, ok := v.(func(int32) int32)
