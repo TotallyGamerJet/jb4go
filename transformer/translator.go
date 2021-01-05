@@ -108,10 +108,9 @@ func translateMethodName(mName, sName, Return string, isStatic, _ bool, params [
 	if name == "<init>" {
 		name = "init"
 	}
-	if isStatic {
-		name = sName + "_" + name
-	} else {
-		name = ValidateName(name)
+	name = sName + "_" + name
+	if !isStatic {
+		name = "I_" + name
 	}
 	name += "_"
 	for _, p := range params {
@@ -162,34 +161,24 @@ func translateCode(blocks []basicBlock) string {
 				}
 				b.WriteString(inst.Value)
 			case inst.Func != "":
-				if inst.HasReceiver {
-					b.WriteString(inst.Args[0] + ".")
-					inst.Args = inst.Args[1:]
-				}
 				var p strings.Builder
 				for _, v := range inst.Args {
+					if strings.Contains(v, localName) {
+						v = strings.ReplaceAll(v, localName, "arg")
+					}
 					p.WriteString(v + ",")
 				}
 				params, ret := translateParams(inst.FDesc[strings.Index(inst.FDesc, ":")+1:])
 				sName := ValidateName(inst.FDesc[:strings.Index(inst.FDesc, ".")])
-				if inst.HasReceiver {
-					var methodCall string
-					switch ret {
-					case charJ, intJ:
-						methodCall = "callMethodInt"
-					case doubleJ:
-						methodCall = "callMethodDouble"
-					case voidJ: // TODO: more return types?
-						methodCall = "callMethod"
-					default:
-						methodCall = "callMethodObject"
-					}
-					b.WriteString(fmt.Sprintf("%s(\"%s\", %s)", methodCall, translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
-				} else {
-					b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
-				}
+				b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
 			default: // any complicated instructions go here
+				for i, v := range inst.Args { // replaces any mentions of local variable with their proper name
+					if strings.Contains(v, localName) {
+						inst.Args[i] = strings.ReplaceAll(v, localName, "arg")
+					}
+				}
 				switch inst.Op {
+				case aload_0, aload_1, aload_2, aload_3:
 				case getstatic:
 					b.WriteString(fmt.Sprintf("%s_%s", ValidateName(inst.Args[0]), inst.Args[1]))
 				case getfield:

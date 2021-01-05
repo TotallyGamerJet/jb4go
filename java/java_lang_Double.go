@@ -1,18 +1,13 @@
 package main
 
-func fn_java_lang_Double() map[string]interface{} {
-	return map[string]interface{}{}
-}
-
 func new_java_lang_Double() *java_lang_Object {
 	type fields struct {
 		E_val float64
 	}
 	return &java_lang_Object{
-		name:    "java_lang_Double",
-		super:   new_java_lang_Object(), // TODO: extend from java.lang.Number
-		fields:  &fields{},
-		methods: fn_java_lang_Double,
+		name:   "java_lang_Double",
+		super:  new_java_lang_Object(), // TODO: extend from java.lang.Number
+		fields: &fields{},
 	}
 }
 

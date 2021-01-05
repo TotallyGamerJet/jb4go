@@ -43,15 +43,9 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case nop: //ignore
 				continue
 			case aload_0, aload_1, aload_2, aload_3:
-				v := nextVar()
-				if len(params) > 0 {
-					inst.Type = params[int(inst.Op-aload_0)]
-				} else {
-					inst.Type = objRefJ //TODO: remove this once all stores will add to params
-				}
-				inst.Dest = v
-				inst.Value = "a" + localName + strconv.Itoa(int(inst.Op-aload_0))
-				stack.push(v, inst.Type)
+				inst.Type = params[int(inst.Op-aload_0)]
+				inst.Args = []string{"a" + localName + strconv.Itoa(int(inst.Op-aload_0))}
+				stack.push(inst.Args[0], inst.Type)
 			case aload:
 				v := nextVar()
 				inst.Type = params[inst.operands[0]]
