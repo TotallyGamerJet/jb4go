@@ -167,6 +167,13 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Dest = v
 				inst.Args = []string{s}
 				stack.push(v, inst.Type)
+			case i2s:
+				v := nextVar()
+				s, _ := stack.pop()
+				inst.Type = intJ
+				inst.Dest = v
+				inst.Args = []string{s}
+				stack.push(v, inst.Type)
 			case irem, iadd, isub, imul, idiv, ishl, ishr, iand, ior:
 				v := nextVar()
 				i2, _ := stack.pop()

@@ -64,7 +64,7 @@ func Translate(class JClass) (g GoFile, err error) {
 			}
 			var prefix string
 			switch t { //TODO: add more prefixes
-			case "int32":
+			case "int16", "int32":
 				prefix = "i"
 			case "uint16":
 				prefix = "c"
@@ -78,7 +78,7 @@ func Translate(class JClass) (g GoFile, err error) {
 				_ = nextArg()
 			}
 		}
-		m.Code = translateCode(v.Code)
+		m.Code = translateCode(v.Code, m.Params)
 		g.Methods = append(g.Methods, m)
 		if v.Name == "main" && v.IsStatic && v.Return == "void" { // add a real main method to call the java generated one
 			g.Imports = append(g.Imports, "os")
@@ -124,12 +124,15 @@ func translateMethodName(mName, sName, Return string, isStatic, _ bool, params [
 }
 
 // translateCode takes instructions in basic blocks and converts them to valid Go and returns it as a string
-func translateCode(blocks []basicBlock) string {
+func translateCode(blocks []basicBlock, params [][3]string) string {
 	exists := make(map[string]bool)
+	for _, v := range params { // adds all the params to the already exist list
+		exists[v[0]] = true
+	}
 	vars := strings.Builder{} // stores all the variables at the top of the function
 	b := strings.Builder{}    // code goes in here
-	for _, block := range blocks {
-		if len(blocks) > 1 {
+	for i, block := range blocks {
+		if len(blocks) > 1 && i != 0 { // TODO: figure out a way to know if label0 is used
 			b.WriteString(fmt.Sprintf("label%d:\n", block[0].Loc))
 		}
 		for _, inst := range block {
@@ -250,6 +253,8 @@ func translateCode(blocks []basicBlock) string {
 					b.WriteString(fmt.Sprintf("%s | %s", inst.Args[0], inst.Args[1]))
 				case i2d:
 					b.WriteString(fmt.Sprintf("float64(%s)", inst.Args[0]))
+				case i2s:
+					b.WriteString(fmt.Sprintf("int32(int16(%s))", inst.Args[0]))
 				case iinc:
 					b.WriteString(fmt.Sprintf("%s += %s", strings.ReplaceAll(inst.Args[0], localName, "arg"), inst.Args[1]))
 				case pop:

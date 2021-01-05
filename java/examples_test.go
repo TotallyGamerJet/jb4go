@@ -11,6 +11,27 @@ import (
 	"text/template"
 )
 
+func Test_ShortLoop(t *testing.T) {
+	// ShortLoop.class test to make sure shorts function properly
+	src := transpile("../examples/ShortLoop.class")
+	v := eval(src, "main.shorts_ShortLoop_loop_S_S")
+	f, ok := v.(func(int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(x int32) int32 {
+		var y = x
+		for ; y < 100; y++ {
+			x--
+		}
+		return x
+	}
+	const num = 7
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
 func Test_IntsConst(t *testing.T) {
 	// IntConst.class tests to make sure all the constant opcodes work properly
 	src := transpile("../examples/IntConst.class")

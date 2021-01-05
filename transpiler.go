@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/totallygamerjet/jb4go/gen"
 	"github.com/totallygamerjet/jb4go/parser"
@@ -33,7 +32,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(gFile)
 	o, err := os.OpenFile(gFile.FileName, os.O_CREATE, 0755)
 	if err != nil {
 		return err
