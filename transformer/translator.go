@@ -190,7 +190,6 @@ func translateCode(blocks []basicBlock) string {
 				case dload_0, dload_1, dload_2, dload_3:
 				case iload_0, iload_1, iload_2, iload_3:
 				case getstatic:
-					b.WriteString(fmt.Sprintf("%s_%s", ValidateName(inst.Args[0]), inst.Args[1]))
 				case getfield:
 					var getF string
 					switch inst.Type { //TODO: check the type and call the right method?

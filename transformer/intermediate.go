@@ -189,13 +189,10 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				p, inst.Type = stack.pop()
 				inst.Args = []string{p}
 			case getstatic:
-				v := nextVar()
-				var n, f string
-				n, f, inst.Type = class.GetFieldRef(inst.index())
-				inst.Type = getJavaType(inst.Type) // cleans up the type if has L...;
-				inst.Dest = v
-				inst.Args = []string{n, f}
-				stack.push(v, inst.Type)
+				n, f, t := class.GetFieldRef(inst.index())
+				inst.Type = getJavaType(t) // cleans up the type if has L...;
+				inst.Args = []string{ValidateName(n) + "_" + f}
+				stack.push(inst.Args[0], inst.Type)
 			case ldc2_w:
 				var a = [1]string{}
 				inst.Args = (a)[:]

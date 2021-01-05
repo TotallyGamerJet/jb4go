@@ -57,23 +57,18 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 	var startOfBlock = []int{0}
 	var exists = make(map[int]bool)
 	for _, v := range instrs {
-		if isTerminator(v) {
-			var next = v.Loc + len(v.operands) + 1
-			if _, ok := exists[next]; !ok { // avoid duplicates by checking if it already exists
+		if hasBranch(v) {
+			var next = v.Loc + getBrOffset(v) // add the offset to current location
+			if _, ok := exists[next]; !ok {
 				startOfBlock = append(startOfBlock, next) // the next instruction is the beginning of a block
 				exists[next] = true
 			}
-			// ignore the operands
-			if hasBranch(v) {
-				// if this instruction branches to some location add it to the list
-				// because it is the beginning of a new_ basic block
-				br := v.Loc + getBrOffset(v)
-				if _, ok := exists[br]; !ok {
-					startOfBlock = append(startOfBlock, br) // add the offset to the current instruction Loc to get next block start
-					exists[br] = true
-				}
-			}
 		}
+	}
+	last := len(instrs) // the last inst
+	if _, ok := exists[last]; !ok {
+		startOfBlock = append(startOfBlock, last) // add the last instr to form complete blocks
+		exists[last] = true
 	}
 	// some instructions may jump backwards and therefore their starts are out of order
 	sort.Ints(startOfBlock)
@@ -147,17 +142,6 @@ func hasBranch(instr instruction) bool {
 	switch instr.Op {
 	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
 		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w:
-		return true
-	}
-	return false
-}
-
-func isTerminator(instr instruction) bool {
-	switch instr.Op {
-	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
-		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w,
-		//invokeinterface, invokedynamic, invokevirtual, invokespecial, invokestatic,
-		areturn, return_, ret, dreturn, freturn, ireturn, lreturn:
 		return true
 	}
 	return false
