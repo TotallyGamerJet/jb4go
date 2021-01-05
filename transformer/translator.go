@@ -178,7 +178,17 @@ func translateCode(blocks []basicBlock) string {
 					}
 				}
 				switch inst.Op {
+				case bipush:
+				case aload:
+				case iload:
+				case dload:
+				case dup:
+				case ldc:
+				case iconst_m1, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5:
+				case dconst_0, dconst_1:
 				case aload_0, aload_1, aload_2, aload_3:
+				case dload_0, dload_1, dload_2, dload_3:
+				case iload_0, iload_1, iload_2, iload_3:
 				case getstatic:
 					b.WriteString(fmt.Sprintf("%s_%s", ValidateName(inst.Args[0]), inst.Args[1]))
 				case getfield:
