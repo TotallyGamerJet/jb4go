@@ -11,6 +11,61 @@ import (
 	"text/template"
 )
 
+func Test_SimpleArray(t *testing.T) {
+	// SimpleArray.class tests creating, loading and storing in an int array
+	src := transpile("../examples/SimpleArray.class")
+	v := eval(src, "main.simple_SimpleArray_array_I_I")
+	f, ok := v.(func(int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(offset int32) int32 {
+		var x [5]int32
+		for i := 1; i < len(x); i++ {
+			x[i] = offset - x[i-1]
+		}
+		return x[4]
+	}
+	const num = 27
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
+func Test_BoolFunc(t *testing.T) {
+	// BoolFunc.class test to make sure booleans function properly
+	src := transpile("../examples/BoolFunc.class")
+	v := eval(src, "main.bool_BoolFunc_bool_ZZII_I")
+	f, ok := v.(func(int32, int32, int32, int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(b, b2, x, y int32) int32 {
+		if b != 0 {
+			return x
+		}
+		if b2 == 0 {
+			return y
+		}
+		if b != 0 && b2 != 0 {
+			return x
+		}
+		if b != 0 || b2 != 0 {
+			return y
+		}
+		return x + y
+	}
+	const (
+		b  = 0 // 0 & 1 only its a bool!
+		b2 = 1 // 0 & 1 only its a bool!
+		x  = 5
+		y  = 7
+	)
+	if f(b, b2, x, y) != g(b, b2, x, y) {
+		t.Failed()
+	}
+}
+
 func Test_ShortLoop(t *testing.T) {
 	// ShortLoop.class test to make sure shorts function properly
 	src := transpile("../examples/ShortLoop.class")
@@ -57,7 +112,8 @@ func Test_Ints(t *testing.T) {
 		t.Failed()
 	}
 	g := func(x int32) int32 {
-		return x - 10*3/2 + 5%6<<3>>2&1 | 21 ^ 8
+		x = -x
+		return x - 15 + 5<<3>>2&1 | int32(uint32(29)>>8) + (x ^ 4104)
 	}
 	const num = 12
 	if f(num) != g(num) {

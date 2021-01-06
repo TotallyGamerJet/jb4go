@@ -64,7 +64,7 @@ func Translate(class JClass) (g GoFile, err error) {
 			}
 			var prefix string
 			switch t { //TODO: add more prefixes
-			case "int16", "int32":
+			case "bool", "int16", "int32":
 				prefix = "i"
 			case "uint16":
 				prefix = "c"
@@ -159,9 +159,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 			}
 			switch {
 			case inst.Value != "":
-				if strings.Contains(inst.Value, localName) {
-					inst.Value = strings.ReplaceAll(inst.Value, localName, "arg")
-				}
+				inst.Value = strings.ReplaceAll(inst.Value, localName, "arg")
 				b.WriteString(inst.Value)
 			case inst.Func != "":
 				var p strings.Builder
@@ -176,12 +174,10 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
 			default: // any complicated instructions go here
 				for i, v := range inst.Args { // replaces any mentions of local variable with their proper name
-					if strings.Contains(v, localName) {
-						inst.Args[i] = strings.ReplaceAll(v, localName, "arg")
-					}
+					inst.Args[i] = strings.ReplaceAll(v, localName, "arg")
 				}
 				switch inst.Op {
-				case bipush:
+				case bipush, sipush:
 				case aload:
 				case iload:
 				case dload:
@@ -193,6 +189,10 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case dload_0, dload_1, dload_2, dload_3:
 				case iload_0, iload_1, iload_2, iload_3:
 				case getstatic:
+				case i2d, i2s:
+				case isub, irem, iadd, imul, idiv, ineg, ishl, ishr, iand, ior, ixor:
+				case ddiv, dadd, dmul:
+				case iaload:
 				case getfield:
 					var getF string
 					switch inst.Type { //TODO: check the type and call the right method?
@@ -211,6 +211,8 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					if len(inst.Args) > 0 {
 						b.WriteString(inst.Args[0])
 					}
+				case ifeq:
+					b.WriteString(fmt.Sprintf("if %s == 0 { goto label%s }", inst.Args[0], inst.Args[1]))
 				case ifge:
 					b.WriteString(fmt.Sprintf("if %s >= 0 { goto label%s }", inst.Args[0], inst.Args[1]))
 				case ifgt:
@@ -233,28 +235,6 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					b.WriteString(fmt.Sprintf("goto label%s", inst.Args[0]))
 				case new_:
 					b.WriteString(fmt.Sprintf("new_%s()", ValidateName(inst.Args[0])))
-				case irem:
-					b.WriteString(fmt.Sprintf("%s %% %s", inst.Args[0], inst.Args[1]))
-				case iadd, dadd:
-					b.WriteString(fmt.Sprintf("%s + %s", inst.Args[0], inst.Args[1]))
-				case isub:
-					b.WriteString(fmt.Sprintf("%s - %s", inst.Args[0], inst.Args[1]))
-				case imul, dmul:
-					b.WriteString(fmt.Sprintf("%s * %s", inst.Args[0], inst.Args[1]))
-				case idiv, ddiv:
-					b.WriteString(fmt.Sprintf("%s / %s", inst.Args[0], inst.Args[1]))
-				case ishl:
-					b.WriteString(fmt.Sprintf("%s << %s", inst.Args[0], inst.Args[1]))
-				case ishr:
-					b.WriteString(fmt.Sprintf("%s >> %s", inst.Args[0], inst.Args[1]))
-				case iand:
-					b.WriteString(fmt.Sprintf("%s & %s", inst.Args[0], inst.Args[1]))
-				case ior:
-					b.WriteString(fmt.Sprintf("%s | %s", inst.Args[0], inst.Args[1]))
-				case i2d:
-					b.WriteString(fmt.Sprintf("float64(%s)", inst.Args[0]))
-				case i2s:
-					b.WriteString(fmt.Sprintf("int32(int16(%s))", inst.Args[0]))
 				case iinc:
 					b.WriteString(fmt.Sprintf("%s += %s", strings.ReplaceAll(inst.Args[0], localName, "arg"), inst.Args[1]))
 				case pop:
@@ -264,8 +244,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case anewarray:
 					b.WriteString(fmt.Sprintf("make([]%s, %s)", getGoType(inst.Args[1]), inst.Args[0]))
 				case arraylength:
-					b.WriteString(fmt.Sprintf("int32(len(%s))", inst.Args[0]))
-				case aaload, iaload:
+				case aaload:
 					b.WriteString(fmt.Sprintf("%s[%s]", inst.Args[0], inst.Args[1]))
 				case aastore, iastore:
 					b.WriteString(fmt.Sprintf("%s[%s] = %s", inst.Args[0], inst.Args[1], inst.Args[2]))

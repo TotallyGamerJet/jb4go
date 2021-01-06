@@ -103,7 +103,7 @@ func getGoType(jType string) string {
 	case charJ:
 		return "int32" //jvm doesn't distinguish between char and ints "uint16"
 	case shortJ:
-		return "int32" //jvm doesn't distinguish between short and ints "int16"
+		return "int32" //jvm doesn't distinguish between shorts and ints "int16"
 	case byteJ:
 		return "int8"
 	case intJ:
@@ -115,7 +115,7 @@ func getGoType(jType string) string {
 	case doubleJ:
 		return "float64"
 	case booleanJ:
-		return "bool"
+		return "int32" //jvm doesn't distinguish between bools and ints "bool"
 	default:
 		if jType[0] == '[' { // ignore arrays
 			return jType
