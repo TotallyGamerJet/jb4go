@@ -66,6 +66,10 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = intJ
 				inst.Args = []string{"i" + localName + strconv.Itoa(int(inst.Op-iload_0))}
 				stack.push(inst.Args[0], inst.Type)
+			case lload_0, lload_1, lload_2, lload_3:
+				inst.Type = longJ
+				inst.Args = []string{"l" + localName + strconv.Itoa(int(inst.Op-lload_0))}
+				stack.push(inst.Args[0], inst.Type)
 			case aaload:
 				v := nextVar()
 				idx, _ := stack.pop()
@@ -112,6 +116,9 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				params[int(inst.operands[0])] = inst.Type
 			case istore_0, istore_1, istore_2, istore_3:
 				inst.Dest = "i" + localName + strconv.Itoa(int(inst.Op-istore_0))
+				inst.Value, inst.Type = stack.pop()
+			case lstore_0, lstore_1, lstore_2, lstore_3:
+				inst.Dest = "l" + localName + strconv.Itoa(int(inst.Op-lstore_0))
 				inst.Value, inst.Type = stack.pop()
 			case dstore_0, dstore_1, dstore_2, dstore_3:
 				inst.Dest = "d" + localName + strconv.Itoa(int(inst.Op-dstore_0))
@@ -162,15 +169,15 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case i2s:
 				s, _ := stack.pop()
 				stack.push("int32(int16("+s+"))", intJ)
-			case iadd, dadd:
+			case iadd, dadd, ladd:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"+"+i2, t)
-			case isub:
+			case isub, lsub:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"-"+i2, t)
-			case imul, dmul:
+			case imul, dmul, ldiv:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"*"+i2, t)
@@ -178,18 +185,18 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"/"+i2, t)
-			case irem:
+			case irem, lrem:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"%"+i2, t)
-			case ineg:
+			case ineg, lneg:
 				i1, t := stack.pop()
 				stack.push("-"+i1, t)
-			case ishl:
+			case ishl, lshl:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"<<"+i2, t)
-			case ishr:
+			case ishr, lshr:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+">>"+i2, t)
@@ -197,20 +204,24 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				i2, _ := stack.pop()
 				i1, t := stack.pop() // go uses logical shift when types are unsigned
 				stack.push(fmt.Sprintf("int32(uint32(%s)>>uint32(%s))", i1, i2), t)
-			case iand:
+			case lushr:
+				i2, _ := stack.pop()
+				i1, t := stack.pop() // go uses logical shift when types are unsigned
+				stack.push(fmt.Sprintf("int64(uint64(%s)>>uint64(%s))", i1, i2), t)
+			case iand, land:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"&"+i2, t)
-			case ior:
+			case ior, lor:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"|"+i2, t)
-			case ixor:
+			case ixor, lxor:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
 				stack.push(i1+"^"+i2, t)
 			case return_:
-			case ireturn, dreturn, areturn:
+			case ireturn, dreturn, areturn, lreturn:
 				inst.Args = make([]string, 1)
 				inst.Args[0], inst.Type = stack.pop()
 			case getstatic:
@@ -229,12 +240,16 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				switch inst.Type { // do any necessary conversions for this constant
 				case "java/lang/String":
 					inst.Args = []string{fmt.Sprintf("newString(%s)", v)}
+				case intJ:
+					inst.Args = []string{v}
 				default:
 					panic("unknown type: " + inst.Type)
 				}
 				stack.push(inst.Args[0], inst.Type)
 			case iconst_m1, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5:
 				stack.push(strconv.Itoa(int(inst.Op)-int(iconst_0)), intJ)
+			case lconst_0, lconst_1:
+				stack.push(strconv.Itoa(int(inst.Op-lconst_0)), longJ)
 			case dconst_0, dconst_1:
 				stack.push(strconv.Itoa(int(inst.Op-dconst_0)), doubleJ)
 			case bipush:

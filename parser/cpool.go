@@ -43,9 +43,17 @@ func ReadCPInfo(p *Parser) (info CPInfo, wide bool) {
 		info = utf8Info{
 			str: readUTF8(b),
 		}
-	//case tagInteger:
+	case tagInteger:
+		info = integerInfo{
+			bytes: p.ReadU4(),
+		}
 	//case tagFloat:
-	//case tagLong:
+	case tagLong:
+		wide = true // takes up two spots
+		info = longInfo{
+			high: p.ReadU4(),
+			low:  p.ReadU4(),
+		}
 	case tagDouble:
 		wide = true // takes up two spots
 		info = doubleInfo{
@@ -70,7 +78,11 @@ func ReadCPInfo(p *Parser) (info CPInfo, wide bool) {
 			classIndex:       p.ReadU2(),
 			nameAndTypeIndex: p.ReadU2(),
 		}
-	//case tagInterfaceMethodref:
+	case tagInterfaceMethodref:
+		info = interfaceMethodRefInfo{
+			classIndex:       p.ReadU2(),
+			nameAndTypeIndex: p.ReadU2(),
+		}
 	case tagNameAndType:
 		info = nameAndTypeInfo{
 			nameIndex:       p.ReadU2(),
@@ -169,6 +181,32 @@ type doubleInfo struct {
 
 func (i doubleInfo) Tag() cpTag {
 	return tagDouble
+}
+
+type longInfo struct {
+	high uint32
+	low  uint32
+}
+
+func (i longInfo) Tag() cpTag {
+	return tagLong
+}
+
+type integerInfo struct {
+	bytes uint32
+}
+
+func (i integerInfo) Tag() cpTag {
+	return tagInteger
+}
+
+type interfaceMethodRefInfo struct {
+	classIndex       uint16
+	nameAndTypeIndex uint16
+}
+
+func (i interfaceMethodRefInfo) Tag() cpTag {
+	return tagInterfaceMethodref
 }
 
 // converts from modified utf8 to unicode

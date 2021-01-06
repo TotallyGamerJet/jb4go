@@ -136,6 +136,11 @@ func (c *RawClass) GetConstant(index int) (string, string) {
 		bits := (int64(v.high) << 32) + int64(v.low)
 		var double = math.Float64frombits(uint64(bits))
 		return strconv.FormatFloat(double, 'E', -1, 64), "double"
+	case integerInfo:
+		return strconv.Itoa(int(v.bytes)), "int"
+	case longInfo:
+		bits := (int64(v.high) << 32) + int64(v.low)
+		return strconv.Itoa(int(bits)), "long"
 	default:
 		panic(fmt.Sprintf("unknown constant: %d", v.Tag()))
 	}

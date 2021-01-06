@@ -68,6 +68,8 @@ func Translate(class JClass) (g GoFile, err error) {
 				prefix = "i"
 			case "uint16":
 				prefix = "c"
+			case "int64":
+				prefix = "l"
 			case "float64":
 				prefix = "d"
 			default:
@@ -182,15 +184,18 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case iload:
 				case dload:
 				case dup:
-				case ldc:
+				case ldc, ldc2_w:
 				case iconst_m1, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5:
 				case dconst_0, dconst_1:
+				case lconst_0, lconst_1:
 				case aload_0, aload_1, aload_2, aload_3:
 				case dload_0, dload_1, dload_2, dload_3:
 				case iload_0, iload_1, iload_2, iload_3:
+				case lload_0, lload_1, lload_2, lload_3:
 				case getstatic:
 				case i2d, i2s:
-				case isub, irem, iadd, imul, idiv, ineg, ishl, ishr, iand, ior, ixor:
+				case isub, irem, iadd, imul, idiv, ineg, ishl, ishr, iand, ior, ixor, iushr:
+				case lsub, lrem, ladd, lmul, ldiv, lneg, lshl, lshr, land, lor, lxor, lushr:
 				case ddiv, dadd, dmul:
 				case iaload:
 				case getfield:
@@ -206,7 +211,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					b.WriteString(fmt.Sprintf("%s.%s(\"E_%s\")", inst.Args[0], getF, inst.Args[1]))
 				case putfield:
 					b.WriteString(fmt.Sprintf("%s.setField(\"E_%s\", %s)", inst.Args[0], inst.Args[1], inst.Args[2]))
-				case return_, areturn, ireturn, dreturn:
+				case return_, areturn, ireturn, dreturn, lreturn:
 					b.WriteString("return ")
 					if len(inst.Args) > 0 {
 						b.WriteString(inst.Args[0])

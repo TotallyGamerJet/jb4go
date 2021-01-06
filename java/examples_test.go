@@ -11,6 +11,33 @@ import (
 	"text/template"
 )
 
+func Test_Longs(t *testing.T) {
+	// Longs.class tests to make sure that all the operators on longs function properly
+	src := transpile("../examples/Longs.class")
+	v := eval(src, "main.longs_Longs_Call_J_J")
+	f, ok := v.(func(int64) int64)
+	if !ok {
+		t.Failed()
+	}
+	g := func(l int64) int64 {
+		l = -l
+		l = l + 5
+		l = l - 8
+		l = l / 12
+		l = l % 2
+		l = l << 8
+		l = l >> 2
+		l = int64(uint64(l) >> 3)
+		l = l | 0b100101101
+		l = l ^ 21
+		return l
+	}
+	const num = -503
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
 func Test_SimpleArray(t *testing.T) {
 	// SimpleArray.class tests creating, loading and storing in an int array
 	src := transpile("../examples/SimpleArray.class")
@@ -113,7 +140,7 @@ func Test_Ints(t *testing.T) {
 	}
 	g := func(x int32) int32 {
 		x = -x
-		return x - 15 + 5<<3>>2&1 | int32(uint32(29)>>8) + (x ^ 4104)
+		return int32(uint32(((((((x-15)+5)<<3)>>2)&1)|62680)^4104) >> 2)
 	}
 	const num = 12
 	if f(num) != g(num) {
