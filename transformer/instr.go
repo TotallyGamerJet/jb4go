@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,7 +10,7 @@ import (
 type instruction struct {
 	Loc      int // the instruction number
 	Op       opcode
-	operands []byte
+	operands []byte // raw additional bytes
 
 	Type        string   // the java type of the new variable
 	Dest        string   // the variable or field name
@@ -52,24 +53,41 @@ func (i instruction) String() (s string) {
 type basicBlock []instruction
 
 func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
-	// if a line number is in this slice it means that it is the first instruction of a block
-	// added 0 because a block starts at the beginning
-	var startOfBlock = []int{0}
-	var exists = make(map[int]bool)
-	for _, v := range instrs {
-		if hasBranch(v) {
-			var next = v.Loc + getBrOffset(v) // add the offset to current location
-			if _, ok := exists[next]; !ok {
-				startOfBlock = append(startOfBlock, next) // the next instruction is the beginning of a block
-				exists[next] = true
+	add, get := func() (func(int), func() []int) {
+		// if a line number is in this slice it means that it is the first instruction of a block
+		//added 0 because a block starts at the beginning
+		var startOfBlock = []int{0}
+		var exists = make(map[int]struct{})
+		return func(i int) {
+				if _, ok := exists[i]; ok {
+					return
+				}
+				startOfBlock = append(startOfBlock, i)
+				exists[i] = struct{}{}
+			}, func() []int {
+				return startOfBlock
 			}
+	}()
+	for _, v := range instrs {
+		if v.Op == lookupswitch {
+			defaultOffset := int(binary.BigEndian.Uint32(v.operands))
+			add(defaultOffset + v.Loc)
+			npairs := int(binary.BigEndian.Uint32(v.operands[4:]))
+			var i = 8
+			for npairs > 0 {
+				i += 4 // skip over match
+				offset := int(binary.BigEndian.Uint32(v.operands[i:]))
+				add(offset + v.Loc)
+				i += 4 // move to next int32
+				npairs--
+			}
+		} else if hasBranch(v) {
+			var next = v.Loc + getBrOffset(v) // add the offset to current location
+			add(next)
 		}
 	}
-	last := len(instrs) // the last inst
-	if _, ok := exists[last]; !ok {
-		startOfBlock = append(startOfBlock, last) // add the last instr to form complete blocks
-		exists[last] = true
-	}
+	add(len(instrs)) // the last inst
+	startOfBlock := get()
 	// some instructions may jump backwards and therefore their starts are out of order
 	sort.Ints(startOfBlock)
 	// loop through all but the last bc we add 1 to each one
@@ -87,11 +105,28 @@ func readInstructions(b []byte) (instrs []instruction) {
 			Op:  opcode(b[i]),
 		}
 		switch instr.Op {
-		case wide, lookupswitch, tableswitch:
+		case wide, tableswitch:
 			panic("not implemented") //TODO: implement
 		}
 		var operN = 0 // # of operands to read in
 		switch instr.Op {
+		case lookupswitch:
+			var padding = 0 // padding gets placed at the end so that nops are added in the right place
+			// zero to three bytes must act as padding, such that defaultbyte1 begins at an address that is a multiple of four bytes
+			for i%4 != 0 {
+				i++
+				padding++
+			}
+			instr.operands = make([]byte, 4+4) // enough space for default and npairs
+			copy(instr.operands, b[i:i+8])     // copies default and npairs into operands
+			i += 8
+			var npairs = binary.BigEndian.Uint32(instr.operands[4:8])           // number of int32 pairs
+			var pairs = int(npairs) * (4 + 4)                                   // size of int32 pairs
+			n := len(instr.operands)                                            // the location to start filling in pairs
+			instr.operands = append(instr.operands, make([]byte, pairs)...)     // make enough room for pairs
+			copy(instr.operands[n:], b[i:])                                     // copy in the pairs
+			i += pairs - 1                                                      // move it to the last instruction of lookupswitch; for loop will increase by 1
+			instr.operands = append(instr.operands, make([]byte, padding-1)...) // add padding
 		case goto_w, jsr_w, invokedynamic, invokeinterface:
 			// has 4 operands
 			operN++

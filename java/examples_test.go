@@ -11,6 +11,31 @@ import (
 	"text/template"
 )
 
+func Test_Switch(t *testing.T) {
+	// SimpleArray.class tests creating, loading and storing in an int array
+	src := transpile("../examples/Switch.class")
+	v := eval(src, "main.com_Switch_call_I_I")
+	f, ok := v.(func(int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(x int32) int32 {
+		switch x {
+		case 12:
+			x -= 12
+		case 7:
+			x += 7
+		case 9:
+			x /= 9
+		}
+		return x
+	}
+	const num = 27
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
 func Test_Longs(t *testing.T) {
 	// Longs.class tests to make sure that all the operators on longs function properly
 	src := transpile("../examples/Longs.class")

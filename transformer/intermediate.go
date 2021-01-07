@@ -1,6 +1,7 @@
 package transformer
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/totallygamerjet/jb4go/parser"
 	"strconv"
@@ -316,6 +317,20 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case iinc:
 				//TODO: make sure this is always an int and not some other type
 				inst.Args = []string{"i" + localName + strconv.Itoa(int(inst.operands[0])), strconv.Itoa(int(inst.operands[1]))}
+			case lookupswitch:
+				key, _ := stack.pop()
+				defaultOffset := int(binary.BigEndian.Uint32(inst.operands))
+				npairs := int(binary.BigEndian.Uint32(inst.operands[4:]))
+				inst.Args = []string{key, strconv.Itoa(defaultOffset + inst.Loc)}
+				var i = 8 // starts at 8 bc defaultOffset and npairs
+				for npairs > 0 {
+					match := int(binary.BigEndian.Uint32(inst.operands[i:]))
+					i += 4
+					offset := int(binary.BigEndian.Uint32(inst.operands[i:]))
+					i += 4
+					inst.Args = append(inst.Args, strconv.Itoa(match), strconv.Itoa(offset+inst.Loc))
+					npairs--
+				}
 			default:
 				panic("unknown Op: " + inst.Op.String())
 			}

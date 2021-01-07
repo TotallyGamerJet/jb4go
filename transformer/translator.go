@@ -145,8 +145,8 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 	}
 	vars := strings.Builder{} // stores all the variables at the top of the function
 	b := strings.Builder{}    // code goes in here
-	for i, block := range blocks {
-		if len(blocks) > 1 && i != 0 { // TODO: figure out a way to know if label0 is used
+	for idx, block := range blocks {
+		if len(blocks) > 1 && idx != 0 { // TODO: figure out a way to know if label0 is used
 			b.WriteString(fmt.Sprintf("label%d:\n", block[0].Loc))
 		}
 		for _, inst := range block {
@@ -288,6 +288,12 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					b.WriteString(fmt.Sprintf("%s[%s]", inst.Args[0], inst.Args[1]))
 				case aastore, iastore:
 					b.WriteString(fmt.Sprintf("%s[%s] = %s", inst.Args[0], inst.Args[1], inst.Args[2]))
+				case lookupswitch:
+					b.WriteString(fmt.Sprintf("switch %s {\n", inst.Args[0]))
+					for i := 2; i < len(inst.Args)-1; i += 2 {
+						b.WriteString(fmt.Sprintf("case %s: goto label%s\n", inst.Args[i], inst.Args[i+1]))
+					}
+					b.WriteString(fmt.Sprintf("default: goto label%s\n}", inst.Args[1]))
 				default:
 					panic(inst.String())
 				}
