@@ -9,21 +9,25 @@ type GoFile struct {
 	FileName string
 	Package  string
 	Imports  []string
-	Globals  [][2]string //name type //TODO: handle const vs var
+	Globals  []Field //TODO: handle const vs var
 	Struct   Struct
 	Methods  []Method
 }
 
 type Struct struct {
 	Name   string
-	Embed  string      // the super object
-	Fields [][2]string //name, type
+	Embed  string // the super object
+	Fields []Field
+}
+
+type Field struct {
+	Name, Type, Value string
 }
 
 type Method struct {
 	Name     string
 	Receiver string      // empty if static
-	Params   [][3]string //name, type, (import if available)
+	Params   [][3]string //Name, type, (import if available)
 	Code     string
 	Return   string
 }
@@ -35,20 +39,29 @@ func Translate(class JClass) (g GoFile, err error) {
 		Name:  ValidateName(class.Name),
 		Embed: sT,
 	}
-	g.FileName = g.Struct.Name + ".go" // I expect the filename to be the same as the class name
+	g.FileName = g.Struct.Name + ".go" // I expect the filename to be the same as the class Name
 	for _, v := range class.Fields {
-		var f [2]string
-		f[0] = "E_" + ValidateName(v.Name) // fields are prefixed with an export tag to make accessible
-		f[1] = getGoType(v.Type)
+		var f = Field{
+			Name: ValidateName(v.Name), // fields are prefixed with an export tag to make accessible
+			Type: getGoType(v.Type),
+		}
 		if v.IsStatic {
+			f.Name = g.Struct.Name + "_" + f.Name
+			f.Value = v.Value
 			g.Globals = append(g.Globals, f)
 		} else {
+			f.Name = "E_" + f.Name
 			g.Struct.Fields = append(g.Struct.Fields, f)
 		}
 	}
 	for _, v := range class.Methods {
 		m := Method{
 			Name: translateMethodName(v.Name, g.Struct.Name, v.Return, v.IsStatic, v.IsPublic, v.Params),
+		}
+		if v.IsAbstract { // ignore abstract methods
+			m.Receiver = "nil"
+			g.Methods = append(g.Methods, m)
+			continue
 		}
 		if v.Return != "void" {
 			m.Return = getGoType(v.Return)
@@ -110,9 +123,8 @@ func translateMethodName(mName, sName, Return string, isStatic, _ bool, params [
 	if name == "<init>" {
 		name = "init"
 	}
-	name = sName + "_" + name
-	if !isStatic {
-		name = "I_" + name
+	if isStatic {
+		name = sName + "_" + name
 	}
 	name += "_"
 	for _, p := range params {
@@ -164,6 +176,10 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				inst.Value = strings.ReplaceAll(inst.Value, localName, "arg")
 				b.WriteString(inst.Value)
 			case inst.Func != "":
+				if inst.HasReceiver {
+					b.WriteString(strings.ReplaceAll(inst.Args[0], localName, "arg") + ".")
+					inst.Args = inst.Args[1:]
+				}
 				var p strings.Builder
 				for _, v := range inst.Args {
 					if strings.Contains(v, localName) {
@@ -173,9 +189,24 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				}
 				params, ret := translateParams(inst.FDesc[strings.Index(inst.FDesc, ":")+1:])
 				sName := ValidateName(inst.FDesc[:strings.Index(inst.FDesc, ".")])
-				b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
+				if inst.HasReceiver {
+					var methodCall string
+					switch ret { // TODO: more return types?
+					case charJ, intJ:
+						methodCall = "callMethodInt"
+					case doubleJ:
+						methodCall = "callMethodDouble"
+					case voidJ:
+						methodCall = "callMethod"
+					default:
+						methodCall = "callMethodObject"
+					}
+					b.WriteString(fmt.Sprintf("%s(\"%s\", %s)", methodCall, translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
+				} else {
+					b.WriteString(fmt.Sprintf("%s(%s)", translateMethodName(inst.Func, sName, ret, !inst.HasReceiver, true, params), p.String()))
+				}
 			default: // any complicated instructions go here
-				for i, v := range inst.Args { // replaces any mentions of local variable with their proper name
+				for i, v := range inst.Args { // replaces any mentions of local variable with their proper Name
 					inst.Args[i] = strings.ReplaceAll(v, localName, "arg")
 				}
 				switch inst.Op {
@@ -193,7 +224,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case iload_0, iload_1, iload_2, iload_3:
 				case lload_0, lload_1, lload_2, lload_3:
 				case getstatic:
-				case i2d, i2s:
+				case i2d, i2s, i2b:
 				case isub, irem, iadd, imul, idiv, ineg, ishl, ishr, iand, ior, ixor, iushr:
 				case lsub, lrem, ladd, lmul, ldiv, lneg, lshl, lshr, land, lor, lxor, lushr:
 				case ddiv, dadd, dmul:
@@ -234,6 +265,10 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					b.WriteString(fmt.Sprintf("if %s < %s { goto label%s }", inst.Args[0], inst.Args[1], inst.Args[2]))
 				case if_icmpgt:
 					b.WriteString(fmt.Sprintf("if %s > %s { goto label%s }", inst.Args[0], inst.Args[1], inst.Args[2]))
+				case if_icmple:
+					b.WriteString(fmt.Sprintf("if %s <= %s { goto label%s }", inst.Args[0], inst.Args[1], inst.Args[2]))
+				case if_icmpne:
+					b.WriteString(fmt.Sprintf("if %s != %s { goto label%s }", inst.Args[0], inst.Args[1], inst.Args[2]))
 				case dcmpg:
 					b.WriteString(fmt.Sprintf("func(x, y float64) int32 {if x > y {return 1;} else if x == y {return 0;} else if x < y {return -1;}; return 1;}(%s, %s)", inst.Args[0], inst.Args[1]))
 				case goto_:

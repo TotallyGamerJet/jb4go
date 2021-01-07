@@ -9,9 +9,9 @@ import (
 {{- end}}
 {{- if gt (len .Globals)  0 -}}
 var (
-    {{- range $i, $e := .Globals -}}
-    {{index $e 0}} {{index $e 1}}
-    {{- end -}}
+    {{- range $i, $e := .Globals }}
+    {{ $e.Name }} {{ $e.Type}}{{ if $e.Value}} = {{ $e.Value}}{{end}}
+    {{- end }}
 )
 {{- end}}
 {{ $s := .Struct }}
@@ -25,10 +25,27 @@ func new_{{ $s.Name }}() *java_lang_Object {
     	name: "{{$s.Name}}",
     	super: new_{{$s.Embed}}(),
     	fields: &fields{},
+    	methods: fn_{{ $s.Name }},
     }
 }
+func fn_{{ $s.Name }}() map[string]interface{} {
+    return map[string]interface{}{
+        {{- range .Methods}}
+        {{- if eq .Receiver "nil"}}
+        "{{.Name}}": nil, // abstract method - implement in subclasses
+        {{- else if .Receiver }}
+        "{{.Name}}": func({{.Receiver}}, {{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+        {{ .Code -}}
+        },
+        {{- end }}
+        {{- end }}
+    }
+}
+
 {{ range .Methods }}
-func {{.Name}}({{ if .Receiver }}{{.Receiver}},{{end}}{{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
+{{- if not .Receiver }}
+func {{.Name}}({{ range .Params }}{{index . 0}} {{index . 1}}, {{end}}) {{.Return}} {
 	{{.Code -}}
 }
+{{- end}}
 {{end}}

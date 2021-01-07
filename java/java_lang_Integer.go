@@ -5,10 +5,15 @@ func new_java_lang_Integer() *java_lang_Object {
 		E_val int32
 	}
 	return &java_lang_Object{
-		name:   "java_lang_Integer",
-		super:  new_java_lang_Object(), // TODO: extend from java.lang.Number
-		fields: &fields{},
+		name:    "java_lang_Integer",
+		super:   new_java_lang_Object(), // TODO: extend from java.lang.Number
+		fields:  &fields{},
+		methods: fn_java_lang_Integer,
 	}
+}
+
+func fn_java_lang_Integer() map[string]interface{} {
+	return map[string]interface{}{}
 }
 
 func java_lang_Integer_valueOf_I_java_lang_Integer(arg0 int32) *java_lang_Object {

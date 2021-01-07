@@ -21,17 +21,19 @@ type JField struct {
 	Type     string `json:"type"`
 	IsPublic bool   `json:"public"`
 	IsStatic bool   `json:"static"`
+	Value    string `json:"value"`
 }
 
 type JMethod struct {
-	Name      string        `json:"name"`
-	IsPublic  bool          `json:"public"`
-	IsStatic  bool          `json:"static"`
-	Params    []nameAndType `json:"params"`
-	Code      []basicBlock  `json:"code"`
-	MaxStack  int           `json:"maxStack"`
-	MaxLocals int           `json:"maxLocals"`
-	Return    string        `json:"return"`
+	Name       string        `json:"name"`
+	IsPublic   bool          `json:"public"`
+	IsStatic   bool          `json:"static"`
+	IsAbstract bool          `json:"abstract"`
+	Params     []nameAndType `json:"params"`
+	Code       []basicBlock  `json:"code"`
+	MaxStack   int           `json:"maxStack"`
+	MaxLocals  int           `json:"maxLocals"`
+	Return     string        `json:"return"`
 }
 
 func Simplify(raw parser.RawClass) (c JClass, err error) {
@@ -46,6 +48,13 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		field.Type = getJavaType(f.GetType(raw))
 		field.IsPublic = f.IsPublic()
 		field.IsStatic = f.IsStatic()
+		if field.IsStatic {
+			switch field.Type {
+			case intJ, longJ:
+				// only load in if its a type that has a constant value
+				field.Value = f.GetConstantValue(raw)
+			}
+		}
 		c.Fields[i] = field
 	}
 	c.Methods = make([]JMethod, len(raw.Methods))
@@ -54,6 +63,7 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		m.Name = info.GetName(raw)
 		m.IsPublic = info.IsPublic()
 		m.IsStatic = info.IsStatic()
+		m.IsAbstract = info.IsAbstract()
 		m.Params, m.Return = translateParams(info.GetDescriptor(raw))
 		var code []byte
 		code, m.MaxStack, m.MaxLocals = info.GetCode()

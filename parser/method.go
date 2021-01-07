@@ -48,3 +48,7 @@ func (m *MethodInfo) IsPublic() bool {
 func (m *MethodInfo) IsStatic() bool {
 	return m.accessFlags&accStatic != 0
 }
+
+func (m *MethodInfo) IsAbstract() bool {
+	return m.accessFlags&accAbstract != 0
+}

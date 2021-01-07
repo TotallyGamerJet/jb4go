@@ -169,6 +169,9 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 			case i2s:
 				s, _ := stack.pop()
 				stack.push("int32(int16("+s+"))", intJ)
+			case i2b:
+				s, _ := stack.pop()
+				stack.push("int32(int8("+s+"))", intJ)
 			case iadd, dadd, ladd:
 				i2, _ := stack.pop()
 				i1, t := stack.pop()
@@ -285,7 +288,7 @@ func createIntermediate(blocks []basicBlock, class parser.RawClass, params []str
 				inst.Type = intJ
 				inst.Args = []string{a1, a2}
 				stack.push(v, inst.Type)
-			case if_icmpge, if_icmplt, if_icmpgt:
+			case if_icmpge, if_icmplt, if_icmpgt, if_icmple, if_icmpne:
 				v2, _ := stack.pop()
 				v1, _ := stack.pop()
 				inst.Args = []string{v1, v2, strconv.Itoa(inst.index() + inst.Loc)}

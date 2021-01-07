@@ -4,8 +4,7 @@ type FieldInfo struct {
 	accessFlags     uint16
 	nameIndex       uint16
 	descriptorIndex uint16
-	//attributesCount uint16
-	attributes []AttributeInfo
+	attributes      []AttributeInfo
 }
 
 func ReadFieldInfo(c *RawClass, p *Parser) (info FieldInfo) {
@@ -34,4 +33,14 @@ func (info *FieldInfo) IsPublic() bool {
 
 func (info *FieldInfo) IsStatic() bool {
 	return info.accessFlags&accStatic != 0
+}
+
+func (info *FieldInfo) GetConstantValue(class RawClass) string {
+	for _, v := range info.attributes {
+		if c, ok := v.(constantValueAttribute); ok {
+			val, _ := class.GetConstant(int(c.constantValueIndex))
+			return val
+		}
+	}
+	panic("doesn't have constant value attribute")
 }

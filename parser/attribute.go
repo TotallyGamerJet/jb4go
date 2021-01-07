@@ -76,6 +76,11 @@ func ReadAttributeInfo(c *RawClass, p *Parser) (info AttributeInfo) {
 			basic:           b,
 			sourceFileIndex: p.ReadU2(),
 		}
+	case "ConstantValue":
+		info = constantValueAttribute{
+			basic:              b,
+			constantValueIndex: p.ReadU2(),
+		}
 	default: // should ignore unknown attributes
 		fmt.Printf("Unknown attribute: %s\n", tag.str)
 		info = b
@@ -157,4 +162,9 @@ type bootstrapMethod struct {
 type sourceFileAttribute struct {
 	basic
 	sourceFileIndex uint16
+}
+
+type constantValueAttribute struct {
+	basic
+	constantValueIndex uint16
 }

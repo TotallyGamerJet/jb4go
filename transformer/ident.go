@@ -105,7 +105,7 @@ func getGoType(jType string) string {
 	case shortJ:
 		return "int32" //jvm doesn't distinguish between shorts and ints "int16"
 	case byteJ:
-		return "int8"
+		return "int32" //jvm doesn't distinguish between bytes and ints "int8"
 	case intJ:
 		return "int32"
 	case longJ:
