@@ -11,8 +11,33 @@ import (
 	"text/template"
 )
 
+func Test_Types(t *testing.T) {
+	// Types.class tests to make sure that casts to different types work
+	src := transpile("../examples/Types.class")
+	v := eval(src, "main.types_Types_Cast_I_I")
+	f, ok := v.(func(int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(x int32) int32 {
+		var y = x + 1
+		var z = int64(y) * 100000000
+		var b = float64(z) * 0.001
+		var a = float32(b) * 0.25
+		var c = int32(a)
+		var s = int16(c) + int16(2)
+		var t = uint16(s) - uint16(9)
+		var u = int8(t)
+		return int32(u)
+	}
+	const num = 27
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
 func Test_Switch(t *testing.T) {
-	// SimpleArray.class tests creating, loading and storing in an int array
+	// Switch.class tests switch statement
 	src := transpile("../examples/Switch.class")
 	v := eval(src, "main.com_Switch_call_I_I")
 	f, ok := v.(func(int32) int32)

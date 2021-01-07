@@ -136,6 +136,9 @@ func (c *RawClass) GetConstant(index int) (string, string) {
 		bits := (int64(v.high) << 32) + int64(v.low)
 		var double = math.Float64frombits(uint64(bits))
 		return strconv.FormatFloat(double, 'E', -1, 64), "double"
+	case floatInfo:
+		f := math.Float32frombits(v.bytes)
+		return strconv.FormatFloat(float64(f), 'E', -1, 32), "float"
 	case integerInfo:
 		return strconv.Itoa(int(v.bytes)), "int"
 	case longInfo:

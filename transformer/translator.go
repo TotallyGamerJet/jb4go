@@ -214,6 +214,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case aload:
 				case iload:
 				case dload:
+				case fload:
 				case dup:
 				case ldc, ldc2_w:
 				case iconst_m1, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5:
@@ -224,9 +225,10 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 				case iload_0, iload_1, iload_2, iload_3:
 				case lload_0, lload_1, lload_2, lload_3:
 				case getstatic:
-				case i2d, i2s, i2b:
+				case i2d, i2s, i2b, i2l, l2d, d2f, d2i, i2c, f2i:
 				case isub, irem, iadd, imul, idiv, ineg, ishl, ishr, iand, ior, ixor, iushr:
 				case lsub, lrem, ladd, lmul, ldiv, lneg, lshl, lshr, land, lor, lxor, lushr:
+				case fmul:
 				case ddiv, dadd, dmul:
 				case iaload:
 				case getfield:
