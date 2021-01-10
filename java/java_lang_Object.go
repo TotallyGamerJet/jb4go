@@ -83,6 +83,9 @@ func (arg0 *java_lang_Object) callMethod(methodName string, params ...interface{
 	for i, v := range params {
 		p[i] = reflect.ValueOf(v)
 	}
+	if arg0.methods == nil {
+		panic(fmt.Sprintf("%s has no method list", arg0.name))
+	}
 	m, ok := arg0.methods()[methodName]
 	if !ok {
 		panic(fmt.Sprintf("%s has no method: %s", arg0.name, methodName))

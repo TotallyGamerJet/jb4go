@@ -1,5 +1,6 @@
 package transformer
 
+import "C"
 import (
 	"github.com/totallygamerjet/jb4go/parser"
 )
@@ -30,7 +31,7 @@ type JMethod struct {
 	IsStatic   bool          `json:"static"`
 	IsAbstract bool          `json:"abstract"`
 	Params     []nameAndType `json:"params"`
-	Code       []basicBlock  `json:"code"`
+	Code       string        `json:"code"`
 	MaxStack   int           `json:"maxStack"`
 	MaxLocals  int           `json:"maxLocals"`
 	Return     string        `json:"return"`
@@ -65,19 +66,17 @@ func Simplify(raw parser.RawClass) (c JClass, err error) {
 		m.IsStatic = info.IsStatic()
 		m.IsAbstract = info.IsAbstract()
 		m.Params, m.Return = translateParams(info.GetDescriptor(raw))
-		var code []byte
-		code, m.MaxStack, m.MaxLocals = info.GetCode()
-		instrs := readInstructions(code)
-		blocks := createBasicBlocks(instrs)
-		var params = make([]string, len(m.Params))
-		for i, v := range m.Params {
-			params[i] = v.type_
-		}
+		var rawcode []byte
+		rawcode, m.MaxStack, m.MaxLocals = info.GetCode()
+		instrs := readInstructions(rawcode)
+		blocks, l2b := createBasicBlocks(instrs)
+		cfg := getCFG(blocks, l2b)
+		var params = make([]nameAndType, len(m.Params))
+		copy(params, m.Params)
 		if !m.IsStatic {
-			params = append([]string{ValidateName(c.Name)}, params...)
+			params = append([]nameAndType{{type_: ValidateName(c.Name)}}, params...)
 		}
-		createIntermediate(blocks, raw, params)
-		m.Code = blocks
+		m.Code = translate(blocks, cfg, m.MaxStack, m.MaxLocals, params, raw)
 		c.Methods[i] = m
 	}
 	return c, nil

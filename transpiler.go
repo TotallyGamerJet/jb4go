@@ -10,13 +10,13 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
-	f, err := os.Open(os.Args[1]) //TODO: handle .jar files
+func run(args []string) error {
+	f, err := os.Open(args[1]) //TODO: handle .jar files
 	if err != nil {
 		return err
 	}

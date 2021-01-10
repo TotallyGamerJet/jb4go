@@ -98,30 +98,50 @@ func ValidateName(name string) string {
 	return name
 }
 
-func getGoType(jType string) string {
+func getGoType(jType string) (t nameAndType) {
 	switch jType {
 	case charJ:
-		return "int32" //jvm doesn't distinguish between char and ints "uint16"
+		t.type_ = "int32" //jvm doesn't distinguish between char and ints "uint16"
 	case shortJ:
-		return "int32" //jvm doesn't distinguish between shorts and ints "int16"
+		t.type_ = "int32" //jvm doesn't distinguish between shorts and ints "int16"
 	case byteJ:
-		return "int32" //jvm doesn't distinguish between bytes and ints "int8"
+		t.type_ = "int32" //jvm doesn't distinguish between bytes and ints "int8"
 	case intJ:
-		return "int32"
+		t.type_ = "int32"
 	case longJ:
-		return "int64"
+		t.type_ = "int64"
 	case floatJ:
-		return "float32"
+		t.type_ = "float32"
 	case doubleJ:
-		return "float64"
+		t.type_ = "float64"
 	case booleanJ:
-		return "int32" //jvm doesn't distinguish between bools and ints "bool"
+		t.type_ = "int32" //jvm doesn't distinguish between bools and ints "bool"
 	default:
 		if jType[0] == '[' { // ignore arrays
-			return jType
+			t.isArray = true
 		}
-		return "*java_lang_Object" //"*" + ValidateName(jType) // is this right?
+		t.type_ = "*java_lang_Object" //"*" + ValidateName(jType) // is this right?
 	}
+	return t
+}
+
+func getPrefix(t nameAndType) (s string) {
+	switch t.type_ {
+	case intJ, "int32":
+		s = "i"
+	case floatJ, "float32":
+		s = "f"
+	case doubleJ, "float64":
+		s = "d"
+	case longJ, "int64":
+		s = "l"
+	default:
+		s = "a"
+	}
+	if t.isArray {
+		s = "r" + s
+	}
+	return s
 }
 
 // takes a shortened java type (ex. I for int) and returns the java type
@@ -161,6 +181,13 @@ func getJavaType(str string) string {
 type nameAndType struct {
 	type_   string
 	isArray bool
+}
+
+func (t nameAndType) String() string {
+	if t.isArray {
+		return "[]" + t.type_
+	}
+	return t.type_
 }
 
 func translateParams(str string) (params []nameAndType, ret string) {

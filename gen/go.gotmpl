@@ -18,7 +18,7 @@ var (
 func new_{{ $s.Name }}() *java_lang_Object {
 	type fields struct {
         {{- range $s.Fields}}
-        {{index . 0}} {{index . 1}}
+        {{ .Name }} {{ .Type }}
         {{- end }}
     }
     return &java_lang_Object{
@@ -28,6 +28,7 @@ func new_{{ $s.Name }}() *java_lang_Object {
     	methods: fn_{{ $s.Name }},
     }
 }
+
 func fn_{{ $s.Name }}() map[string]interface{} {
     return map[string]interface{}{
         {{- range .Methods}}

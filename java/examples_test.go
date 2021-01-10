@@ -11,6 +11,26 @@ import (
 	"text/template"
 )
 
+func Test_Bool(t *testing.T) {
+	// Bool.class tests to make sure irregular conditionals function properly
+	src := transpile("../examples/Bool.class")
+	v := eval(src, "main.bool_Bool_call_I_Z")
+	f, ok := v.(func(int32) int32)
+	if !ok {
+		t.Failed()
+	}
+	g := func(x int32) int32 {
+		if x < 0 {
+			return 1
+		}
+		return 0
+	}
+	const num = 27
+	if f(num) != g(num) {
+		t.Failed()
+	}
+}
+
 func Test_Types(t *testing.T) {
 	// Types.class tests to make sure that casts to different types work
 	src := transpile("../examples/Types.class")
@@ -55,7 +75,7 @@ func Test_Switch(t *testing.T) {
 		}
 		return x
 	}
-	const num = 27
+	const num = 12
 	if f(num) != g(num) {
 		t.Failed()
 	}
@@ -153,8 +173,8 @@ func Test_ShortLoop(t *testing.T) {
 	}
 	g := func(x int32) int32 {
 		var y = x
-		for ; y < 100; y++ {
-			x--
+		for ; y < 100; y = int32(int16(y + 1)) {
+			x = int32(int16(x - 1))
 		}
 		return x
 	}
@@ -190,9 +210,9 @@ func Test_Ints(t *testing.T) {
 	}
 	g := func(x int32) int32 {
 		x = -x
-		return int32(uint32(((((((x-15)+5)<<3)>>2)&1)|62680)^4104) >> 2)
+		return (int32(uint32(((((((x-15)+5)<<3)>>2)&1)|62680)^4104)>>2) % 7) * 10
 	}
-	const num = 12
+	const num = -1294092572
 	if f(num) != g(num) {
 		t.Failed()
 	}

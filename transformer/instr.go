@@ -52,7 +52,43 @@ func (i instruction) String() (s string) {
 
 type basicBlock []instruction
 
-func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
+func (b basicBlock) getLineStart() int {
+	return b[0].Loc
+}
+
+func (b basicBlock) getLast() instruction {
+	var last instruction
+	for i := len(b) - 1; i >= 0; i-- {
+		last = b[i]
+		if last.Op != nop {
+			break
+		}
+	}
+	return last
+}
+
+func getCFG(blocks []basicBlock, l2b map[int]int) map[int][]int {
+	successors := make(map[int][]int) // makes names of blocks to a slice of names of blocks
+	for idx, block := range blocks {
+		var last = block.getLast()
+		if last.Op == goto_ || last.Op == goto_w {
+			successors[idx] = []int{l2b[getBrOffset(last)+last.Loc]}
+		} else if hasBranch(last) {
+			successors[idx] = []int{l2b[getBrOffset(last)+last.Loc], idx + 1}
+		} else if isTerminator(last) {
+			successors[idx] = []int{}
+		} else { // fallthrough to next block
+			if idx+1 >= len(blocks) { // no more blocks
+				successors[idx] = []int{}
+			} else {
+				successors[idx] = []int{idx + 1}
+			}
+		}
+	}
+	return successors
+}
+
+func createBasicBlocks(instrs []instruction) ([]basicBlock, map[int]int) {
 	add, get := func() (func(int), func() []int) {
 		// if a line number is in this slice it means that it is the first instruction of a block
 		//added 0 because a block starts at the beginning
@@ -81,21 +117,27 @@ func createBasicBlocks(instrs []instruction) (blocks []basicBlock) {
 				i += 4 // move to next int32
 				npairs--
 			}
-		} else if hasBranch(v) {
-			var next = v.Loc + getBrOffset(v) // add the offset to current location
-			add(next)
+			add(v.Loc + len(v.operands) + 1) // basic block at the next instruction
+		} else if isTerminator(v) {
+			add(v.Loc + len(v.operands) + 1)                     // basic block at the next instruction
+			if hasBranch(v) || v.Op == goto_ || v.Op == goto_w { // a branch creates a new block at the branch location
+				add(v.Loc + getBrOffset(v))
+			}
 		}
 	}
 	add(len(instrs)) // the last inst
 	startOfBlock := get()
 	// some instructions may jump backwards and therefore their starts are out of order
 	sort.Ints(startOfBlock)
+	blocks := make([]basicBlock, len(startOfBlock)-1) // number of blocks is one less size
+	l2b := make(map[int]int)                          // match line numbers to block ids
 	// loop through all but the last bc we add 1 to each one
 	for i, v := range startOfBlock[:len(startOfBlock)-1] {
 		// the next block is from this current start block # and the next one
-		blocks = append(blocks, instrs[v:startOfBlock[i+1]])
+		blocks[i] = instrs[v:startOfBlock[i+1]]
+		l2b[v] = i // line v is the start of block i
 	}
-	return blocks
+	return blocks, l2b
 }
 
 func readInstructions(b []byte) (instrs []instruction) {
@@ -176,7 +218,18 @@ func getBrOffset(instr instruction) int {
 func hasBranch(instr instruction) bool {
 	switch instr.Op {
 	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
-		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w:
+		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull: //, goto_, goto_w:
+		return true
+	}
+	return false
+}
+
+func isTerminator(instr instruction) bool {
+	switch instr.Op {
+	case jsr, jsr_w, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple,
+		if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, goto_, goto_w,
+		//invokeinterface, invokedynamic, invokevirtual, invokespecial, invokestatic,
+		areturn, return_, ret, dreturn, freturn, ireturn, lreturn:
 		return true
 	}
 	return false

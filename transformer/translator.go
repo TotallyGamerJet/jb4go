@@ -43,7 +43,7 @@ func Translate(class JClass) (g GoFile, err error) {
 	for _, v := range class.Fields {
 		var f = Field{
 			Name: ValidateName(v.Name), // fields are prefixed with an export tag to make accessible
-			Type: getGoType(v.Type),
+			Type: getGoType(v.Type).type_,
 		}
 		if v.IsStatic {
 			f.Name = g.Struct.Name + "_" + f.Name
@@ -64,36 +64,21 @@ func Translate(class JClass) (g GoFile, err error) {
 			continue
 		}
 		if v.Return != "void" {
-			m.Return = getGoType(v.Return)
+			m.Return = getGoType(v.Return).type_
 		}
 		nextArg := getUniqueCounter("arg")
 		if !v.IsStatic {
 			m.Receiver = "a" + nextArg() + " *java_lang_Object"
 		}
 		for _, v2 := range v.Params {
-			t := getGoType(v2.type_)
-			if v2.isArray {
-				t = "[]" + t
-			}
-			var prefix string
-			switch t { //TODO: add more prefixes
-			case "bool", "int16", "int32":
-				prefix = "i"
-			case "uint16":
-				prefix = "c"
-			case "int64":
-				prefix = "l"
-			case "float64":
-				prefix = "d"
-			default:
-				prefix = "a"
-			}
-			m.Params = append(m.Params, [3]string{prefix + nextArg(), t})
-			if t == "float64" { // doubles and longs take up two argument slots
+			t := getGoType(v2.String())
+			var prefix = getPrefix(t)
+			m.Params = append(m.Params, [3]string{prefix + nextArg(), t.String()})
+			if t.type_ == "float64" { // doubles and longs take up two argument slots
 				_ = nextArg()
 			}
 		}
-		m.Code = translateCode(v.Code, m.Params)
+		m.Code = v.Code //translateCode(v.Code, m.Params)
 		g.Methods = append(g.Methods, m)
 		if v.Name == "main" && v.IsStatic && v.Return == "void" { // add a real main method to call the java generated one
 			g.Imports = append(g.Imports, "os")
@@ -162,7 +147,7 @@ func translateCode(blocks []basicBlock, params [][3]string) string {
 					if inst.Op == anewarray {
 						t = inst.Type
 					} else {
-						t = getGoType(inst.Type)
+						t = getGoType(inst.Type).type_
 					}
 				}
 				if _, ok := exists[inst.Dest]; !strings.Contains(inst.Dest, ".") && !ok { // ignore fields in the var list

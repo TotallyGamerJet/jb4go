@@ -11,9 +11,10 @@ func new_java_util_Scanner() *java_lang_Object {
 		E_r *bufio.Reader
 	}
 	return &java_lang_Object{
-		name:   "java_util_Scanner",
-		super:  new_java_lang_Object(),
-		fields: &fields{},
+		name:    "java_util_Scanner",
+		super:   new_java_lang_Object(),
+		fields:  &fields{},
+		methods: fn_java_util_Scanner,
 	}
 }
 func fn_java_util_Scanner() map[string]interface{} {
