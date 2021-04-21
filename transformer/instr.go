@@ -190,10 +190,10 @@ func readInstructions(b []byte) (instrs []instruction) {
 			operN++
 			fallthrough
 		default: // default is one byte so do nothing
-			for operN > 0 {
-				i++
-				instr.operands = append(instr.operands, b[i])
-				operN--
+			if operN > 0 {
+				instr.operands = make([]byte, operN)
+				copy(instr.operands, b[i+1:])
+				i += operN
 			}
 		}
 		instrs = append(instrs, instr)
