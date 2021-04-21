@@ -140,6 +140,9 @@ func createBasicBlocks(instrs []instruction) ([]basicBlock, map[int]int) {
 	return blocks, l2b
 }
 
+// readInstructions takes in a slice of bytes and breaks them up into a slice of useful instructions
+// if an instruction has operands there will be nop instructions replaced in the slice so that
+// jumps are easy to resolve
 func readInstructions(b []byte) (instrs []instruction) {
 	for i := 0; i < len(b); i++ {
 		var instr = instruction{
@@ -197,10 +200,8 @@ func readInstructions(b []byte) (instrs []instruction) {
 			}
 		}
 		instrs = append(instrs, instr)
-		for range instr.operands {
-			// add a nop instruction so that branches will go to the proper place
-			instrs = append(instrs, instruction{})
-		}
+		// add a nop instruction so that branches will go to the proper place
+		instrs = append(instrs, make([]instruction, len(instr.operands))...)
 	}
 	return instrs
 }
