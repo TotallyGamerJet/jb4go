@@ -20,7 +20,8 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	raw, err := parser.Parse(f)
+	p := parser.Parse(f)
+	raw, err := parser.ReadClass(p)
 	if err != nil {
 		return errors.Wrap(err, "Couldn't parse java file: ")
 	}
@@ -32,7 +33,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	o, err := os.OpenFile(gFile.FileName, os.O_CREATE, 0755)
+	o, err := os.OpenFile(gFile.FileName, os.O_CREATE|os.O_RDWR, 0775)
 	if err != nil {
 		return err
 	}

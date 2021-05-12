@@ -223,7 +223,7 @@ func transpile(filename string) string {
 	if err != nil {
 		panic(err)
 	}
-	raw, err := parser.Parse(file)
+	raw, err := parser.ReadClass(parser.Parse(file))
 	if err != nil {
 		panic(err)
 	}

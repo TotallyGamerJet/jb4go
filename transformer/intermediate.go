@@ -12,7 +12,7 @@ const (
 	localName = "@local"
 )
 
-func translate(blocks []basicBlock, cfg map[int][]int, stackSize, localSize int, params []nameAndType, raw parser.RawClass) string {
+func translate(blocks []basicBlock, cfg map[int][]int, stackSize, localSize int, params []nameAndType, raw parser.ClassFile) string {
 	vB := newVarBuilder(params, localSize)
 	stack := newStack(stackSize)
 	var code strings.Builder
@@ -143,7 +143,23 @@ var compare = map[opcode]string{
 	if_icmpgt: ">",
 }
 
-func translateBlock(stack *stack, vB *varBuilder, blocks []basicBlock, cfg map[int][]int, class parser.RawClass, code *strings.Builder) {
+func getFieldRef(c parser.ClassFile, idx int) (cName, tName, typ string) {
+	cp := c.ConstantPool
+	classIdx, ntIdx := cp[idx].FieldRef()
+	nIdx := cp[classIdx].Class()
+	tNameIdx, tIdx := cp[ntIdx].NameAndType()
+	return cp[nIdx].UTF8(), cp[tNameIdx].UTF8(), cp[tIdx].UTF8()
+}
+
+func getMethodRef(c parser.ClassFile, idx int) (cName, mName, desc string) {
+	cp := c.ConstantPool
+	cIdx, ntIdx := cp[idx].MethodRef()
+	nIdx := cp[cIdx].Class()
+	mIdx, descIdx := cp[ntIdx].NameAndType()
+	return cp[nIdx].UTF8(), cp[mIdx].UTF8(), cp[descIdx].UTF8()
+}
+
+func translateBlock(stack *stack, vB *varBuilder, blocks []basicBlock, cfg map[int][]int, class parser.ClassFile, code *strings.Builder) {
 	nextVar := func(t string, isArray bool) string {
 		v := vB.newVar(nameAndType{type_: t, isArray: isArray})
 		stack.push(v, nameAndType{type_: t, isArray: isArray})
@@ -231,7 +247,7 @@ nextBlock:
 				ref, _ := stack.pop()
 				code.WriteString(fmt.Sprintf("%s[%s] = %s\n", ref, idx, val))
 			case anewarray:
-				c := class.GetClass(inst.index())
+				c := class.ConstantPool[class.ConstantPool[inst.index()].Class()].UTF8()
 				t := getGoType(c)
 				size, _ := stack.pop()
 				v := nextVar(t.type_, true)
@@ -257,28 +273,31 @@ nextBlock:
 				v := nextVar("int32", false)
 				set(v, strconv.Itoa(inst.index()))
 			case new_:
-				set(nextVar("*java_lang_Object", false), "new_"+ValidateName(class.GetClass(inst.index()))+"()")
+				c := class.ConstantPool[inst.index()].Class()
+				set(nextVar("*java_lang_Object", false), "new_"+ValidateName(class.ConstantPool[c].UTF8())+"()")
 			case ldc:
-				c, t := class.GetConstant(int(inst.operands[0]))
-				switch t {
-				case intJ:
-					set(nextVar("int32", false), c)
-				case floatJ:
-					set(nextVar("float32", false), c)
-				case "java/lang/String":
-					set(nextVar("*java_lang_Object", false), "newString("+c+")")
+				c := class.ConstantPool[int(inst.operands[0])]
+				switch c.Tag {
+				case parser.TagInteger:
+					set(nextVar("int32", false), strconv.Itoa(int(c.Integer())))
+				case parser.TagFloat:
+					set(nextVar("float32", false), strconv.FormatFloat(float64(c.Float()), 'E', -1, 32))
+				case parser.TagString:
+					utf8 := class.ConstantPool[c.String()]
+					set(nextVar("*java_lang_Object", false), "newString("+utf8.UTF8()+")")
 				default:
-					panic("unknown type: " + t)
+					panic(fmt.Sprintf("unknown type: %d", c.Tag))
 				}
 			case ldc2_w:
-				c, t := class.GetConstant(inst.index())
-				switch t {
-				case longJ:
-					set(nextVar("int64", false), c)
-				case doubleJ:
-					set(nextVar("float64", false), c)
+				entry := class.ConstantPool[inst.index()]
+				//c, t := class.GetConstant(inst.index())
+				switch entry.Tag {
+				case parser.TagLong:
+					set(nextVar("int64", false), strconv.Itoa(int(entry.Long())))
+				case parser.TagDouble:
+					set(nextVar("float64", false), strconv.FormatFloat(entry.Double(), 'E', -1, 64))
 				default:
-					panic("unknown type: " + t)
+					panic(fmt.Sprintf("unknown type: %d", entry.Tag))
 				}
 			case dup:
 				v, t := stack.pop()
@@ -338,33 +357,37 @@ nextBlock:
 			case i2s:
 				cast("int32", "int32(int16(%s))")
 			case putfield:
-				_, f, _ := class.GetFieldRef(inst.index())
+				_, f, _ := getFieldRef(class, inst.index())
+				//_, f, _ := class.GetFieldRef(inst.index())
 				val, _ := stack.pop()
 				ref, _ := stack.pop()
-				code.WriteString(fmt.Sprintf("%s.setField(\"%s\", %s)\n", ref, "E_"+f, val))
+				code.WriteString(fmt.Sprintf("%s.__set%s(%s)\n", ref, f, val))
 			case getfield:
+				_, f, t := getFieldRef(class, inst.index())
+				//_, f, t := class.GetFieldRef(inst.index())
 				ref, _ := stack.pop()
-				_, f, t := class.GetFieldRef(inst.index())
 				g := getGoType(getJavaType(t))
-				var callMethod = "getField"
-				switch g.type_ {
-				case "float64":
-					callMethod = "getFieldDouble"
-				case "int32":
-					callMethod = "getFieldInt"
-				default:
-					callMethod = "getFieldObject"
-				}
+				//var callMethod = "getField"
+				//switch g.type_ {
+				//case "float64":
+				//	callMethod = "getFieldDouble"
+				//case "int32":
+				//	callMethod = "getFieldInt"
+				//default:
+				//	callMethod = "getFieldObject"
+				//}
 				v := nextVar(g.type_, g.isArray)
-				code.WriteString(fmt.Sprintf("%s = %s.%s(\"%s\")\n", v, ref, callMethod, "E_"+f))
+				code.WriteString(fmt.Sprintf("%s = %s.__%s()\n", v, ref, f))
 			case putstatic:
 				panic("not implemented")
 			case getstatic:
-				n, f, t := class.GetFieldRef(inst.index())
+				n, f, t := getFieldRef(class, inst.index())
+				//n, f, t := class.GetFieldRef(inst.index())
 				g := getGoType(t)
 				set(nextVar(g.type_, g.isArray), ValidateName(n+"_"+f))
 			case invokevirtual:
-				c, n, t := class.GetMethodRef(inst.index())
+				c, n, t := getMethodRef(class, inst.index())
+				//c, n, t := class.GetMethodRef(inst.index())
 				p, ret := translateParams(t)
 				n = translateMethodName(n, c, ret, false, true, p)
 				var params string
@@ -390,7 +413,8 @@ nextBlock:
 				}
 				code.WriteString(fmt.Sprintf("%s = %s.%s(\"%s\", %s)\n", v, rec, callMethod, ValidateName(n), params))
 			case invokespecial:
-				c, n, t := class.GetMethodRef(inst.index())
+				c, n, t := getMethodRef(class, inst.index())
+				//c, n, t := class.GetMethodRef(inst.index())
 				if n == "<init>" {
 					n = "init"
 				}
@@ -402,27 +426,17 @@ nextBlock:
 					params = v + "," + params
 				}
 				rec, _ := stack.pop()
-				if n == "init" { // TODO: determine if should use super
-					rec += ".super"
+				if strings.Contains(n, "init") { // TODO: determine if should use super
+					rec += ".super()"
 				}
-				var callMethod string
-				var v = "_"
-				switch ret {
-				case intJ:
-					callMethod = "callMethodInt"
-					v = nextVar("int32", false)
-				case doubleJ:
-					callMethod = "callMethodDouble"
-					v = nextVar("float64", false)
-				case voidJ:
-					callMethod = "callMethod"
-				default:
-					callMethod = "callMethodObject"
-					v = nextVar("*java_lang_Object", false)
+				var v = ""
+				if ret != voidJ {
+					v = "_ = " // TODO: create type
 				}
-				code.WriteString(fmt.Sprintf("%s = %s.%s(\"%s\", %s)\n", v, rec, callMethod, ValidateName(n), params))
+				code.WriteString(fmt.Sprintf("%s%s.%s(%s)\n", v, rec, ValidateName(n), params))
 			case invokestatic:
-				c, n, t := class.GetMethodRef(inst.index())
+				c, n, t := getMethodRef(class, inst.index())
+				//c, n, t := class.GetMethodRef(inst.index())
 				p, ret := translateParams(t)
 				n = translateMethodName(n, c, ret, true, true, p)
 				var params string
